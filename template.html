@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IF Dashboard — Foodology</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root{
+  --bg:#0d0f1a;--card:#161827;--border:#272a45;
+  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+  --accent:#818cf8;--muted:#7b80a8;--text:#e2e8f0;
+  --text2:#94a3b8;--hover:#1e2235;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:13px;}
+header{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
+header h1{font-size:15px;font-weight:700;color:#fff;}
+header .meta{font-size:11px;color:var(--muted);}
+.cbtn{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.cbtn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.cbtn:hover:not(.active){border-color:var(--accent);color:var(--accent);}
+.badge{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;}
+.badge-y{background:rgba(245,158,11,.15);color:var(--yellow);}
+.badge-g{background:rgba(34,197,94,.15);color:var(--green);}
+.badge-r{background:rgba(239,68,68,.15);color:var(--red);}
+/* Tabs */
+.tab-nav{background:var(--card);border-bottom:1px solid var(--border);display:flex;padding:0 20px;}
+.tab-btn{padding:9px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-content{display:none;}.tab-content.active{display:block;}
+/* Breadcrumb */
+.bc{background:var(--card);border-bottom:1px solid var(--border);padding:7px 20px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);flex-wrap:wrap;}
+.bc .link{cursor:pointer;color:var(--accent);}.bc .link:hover{text-decoration:underline;}
+.bc .sep{color:var(--border);}
+/* Loader */
+#loader{padding:60px 20px;text-align:center;color:var(--muted);}
+.spin{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-steps{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
+.lstep{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;background:var(--card);color:var(--muted);border:1px solid var(--border);}
+.lstep.done{border-color:var(--green);color:var(--green);}
+.lstep.act{border-color:var(--accent);color:var(--accent);}
+/* Main */
+.main{padding:16px 20px;}
+.kpi-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 15px;min-width:120px;flex:1;}
+.kpi .lbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}
+.kpi .val{font-size:20px;font-weight:700;}
+.kpi .sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.kpi .dlt{font-size:11px;font-weight:600;}
+.up{color:var(--green);}.dn{color:var(--red);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:800px){.g2{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;}
+.ch{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.ch h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+.ch .hint{font-size:10px;color:var(--muted);}
+.cb{padding:10px 0;}
+.cwrap{padding:14px;}
+canvas{max-height:240px;}
+.clt{max-height:300px!important;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:5px 12px;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:7px 12px;border-bottom:1px solid rgba(39,42,69,.4);font-size:12px;}
+tr:last-child td{border-bottom:none;}
+tr.cl{cursor:pointer;}tr.cl:hover td{background:var(--hover);}
+.bar-wrap{display:flex;align-items:center;gap:7px;}
+.bt{width:70px;height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;flex-shrink:0;}
+.bf{height:100%;border-radius:3px;}
+.pct{font-size:12px;font-weight:600;min-width:44px;}
+.tag{display:inline-flex;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600;margin:1px;}
+.tr{background:rgba(239,68,68,.15);color:var(--red);}
+.ty{background:rgba(245,158,11,.15);color:var(--yellow);}
+.tg{background:rgba(34,197,94,.15);color:var(--green);}
+.ax{background:rgba(129,140,248,.06);border:1px solid rgba(129,140,248,.2);border-radius:8px;padding:11px 13px;margin:0 12px 12px;}
+.ax h4{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;}
+.ai{display:flex;gap:7px;margin-bottom:5px;font-size:12px;line-height:1.5;}
+.an{background:var(--accent);color:#fff;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.alert{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:12px;display:flex;gap:9px;}
+.srch{padding:8px 12px 0;}
+input[type=text],select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-size:12px;outline:none;}
+input[type=text]{width:100%;}
+input:focus,select:focus{border-color:var(--accent);}
+.empty{color:var(--muted);font-size:12px;padding:20px;text-align:center;}
+.rnk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--border);font-size:9px;font-weight:700;flex-shrink:0;}
+.r1{background:rgba(239,68,68,.3);color:var(--red);}.r2{background:rgba(245,158,11,.2);color:var(--yellow);}.r3{background:rgba(129,140,248,.2);color:var(--accent);}
+.star{color:#f59e0b;font-size:11px;}
+.cmt-box{background:rgba(255,255,255,.03);border-left:3px solid var(--border);padding:7px 11px;margin:3px 12px;border-radius:0 5px 5px 0;font-size:12px;color:var(--text2);line-height:1.5;}
+.cmt-box.bad{border-color:var(--red);}
+.bchip{display:inline-flex;align-items:center;gap:3px;background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--accent);cursor:pointer;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:700px){.two{grid-template-columns:1fr;}}
+.sort-th{cursor:pointer;user-select:none;}
+.sort-th:hover{color:var(--accent);}
+.cmt-row{padding:9px 16px;border-bottom:1px solid rgba(39,42,69,.4);display:grid;grid-template-columns:130px 130px 120px 1fr 48px;gap:8px;align-items:start;font-size:12px;}
+.cmt-row:hover{background:var(--hover);}
+.cmt-head{background:var(--bg);padding:6px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:130px 130px 120px 1fr 48px;gap:8px;font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;}
+.fl-bar{display:flex;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;}
+.fl-bar label{font-size:11px;color:var(--muted);}
+select.sm{min-width:110px;}
+#cmt-count{font-size:11px;color:var(--muted);}
+/* Color scale legend */
+.scale-bar{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin-bottom:12px;flex-wrap:wrap;}
+.scale-item{display:flex;align-items:center;gap:6px;font-size:12px;}
+.scale-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.scale-label{color:var(--text);font-weight:600;}
+.scale-range{color:var(--muted);font-size:11px;}
+.scale-divider{width:1px;height:20px;background:var(--border);margin:0 4px;}
+
+/* Sortable brand table */
+#brand-sort{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.sort-btn{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-size:10px;font-weight:600;cursor:pointer;}
+.sort-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMzAgNDQiPgogIDx0ZXh0IHg9IjY1IiB5PSIzMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgCiAgICBmb250LWZhbWlseT0iTnVuaXRvLEZ1dHVyYSxUcmVidWNoZXQgTVMsc3lzdGVtLXVpLHNhbnMtc2VyaWYiIAogICAgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zaXplPSIzMiIgZmlsbD0id2hpdGUiIGxldHRlci1zcGFjaW5nPSItMC44Ij5mZGd5LjwvdGV4dD4KPC9zdmc+" alt="fdgy." style="height:32px;opacity:0.95;filter:brightness(1);">
+    <div style="width:1px;height:28px;background:var(--border);"></div>
+    <div>
+      <h1 id="header-title" style="font-size:14px;">In Full Dashboard — __COUNTRY__</h1>
+      <div class="meta" id="header-meta">__META__</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;align-items:center;">
+    <a href="mex.html" id="nav-mex" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;text-decoration:none;">🇲🇽 México</a>
+    <a href="col.html" id="nav-col" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;text-decoration:none;">🇨🇴 Colombia</a>
+    <a href="per.html" id="nav-per" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;text-decoration:none;">🇵🇪 Perú</a>
+    <div style="width:1px;height:24px;background:var(--border);margin:0 4px;"></div>
+    <button class="cbtn" onclick="exportHTML()" id="export-btn" 
+      style="background:rgba(129,140,248,.15);border-color:var(--accent);color:var(--accent);"
+      title="Genera un HTML estático con los datos actuales para compartir">
+      ⬇ Exportar HTML
+    </button>
+  </div>
+</header>
+
+<div class="tab-nav">
+  <div class="tab-btn active" onclick="switchTab('dashboard',this)">📊 Dashboard</div>
+  <div class="tab-btn" onclick="switchTab('comentarios',this)">💬 Comentarios</div>
+</div>
+
+<!-- Dashboard Tab -->
+<div id="tab-dashboard" class="tab-content active">
+  <div class="bc" id="bc"><span class="link" onclick="go('mx')">🇲🇽 México</span></div>
+  <div id="loader">
+    <div class="spin"></div>
+    <div style="font-weight:600;font-size:14px;">Cargando datos desde Redshift…</div>
+    <div style="font-size:12px;margin-top:4px;color:var(--muted)" id="load-msg">Iniciando consultas</div>
+    <div class="load-steps" id="load-steps"></div>
+  </div>
+  <div id="app" style="display:none;padding:16px 20px;"></div>
+</div>
+
+<!-- Comentarios Tab -->
+<div id="tab-comentarios" class="tab-content">
+  <div style="padding:14px 20px;">
+    <div class="card">
+      <div class="ch"><h3>💬 Comentarios de Clientes</h3><span id="cmt-count"></span></div>
+      <div class="fl-bar">
+        <label>Ops:</label>
+        <select id="flt-ops" class="sm" onchange="filterCmts()"><option value="">Todos</option></select>
+        <label style="margin-left:8px">Cocina:</label>
+        <select id="flt-k" class="sm" onchange="filterCmts()"><option value="">Todas</option></select>
+        <label style="margin-left:8px">Marca:</label>
+        <select id="flt-b" class="sm" onchange="filterCmts()"><option value="">Todas</option></select>
+        <label style="margin-left:8px">Rating:</label>
+        <select id="flt-r" class="sm" onchange="filterCmts()">
+          <option value="">Todos</option>
+          <option value="low">⭐ 1–2 (bajo)</option>
+          <option value="3">⭐ 3</option>
+        </select>
+        <input type="text" id="flt-txt" placeholder="Buscar texto…" oninput="filterCmts()" style="width:160px;margin-left:8px">
+      </div>
+      <div id="cmt-loading" class="empty" style="display:none;">
+        <div class="spin" style="margin:0 auto 8px;width:24px;height:24px;border-width:2px;"></div>
+        Cargando comentarios…
+      </div>
+      <div class="cmt-head"><span>Ops Manager</span><span>Cocina</span><span>Marca</span><span>Comentario</span><span>Rating</span></div>
+      <div id="cmt-list" style="max-height:550px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Highlight current country in nav
+(function(){
+  const code = '__COUNTRY_CODE__';
+  const el = document.getElementById('nav-'+code);
+  if(el){el.style.background='var(--accent)';el.style.color='#fff';el.style.borderColor='var(--accent)';}
+})();
+</script>
+
+<script>
+/*__DATA__*/
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// MAESTRO — kitchen_id → {ops, city}
+// ═══════════════════════════════════════════════════════════════
+const MAESTRO = {
+  MEX:{
+    "01 DOCTORES":{ops:"Sergio Torres",city:"CDMX"},"02 SAN ANGEL":{ops:"Guillermo Villalva",city:"CDMX"},"03 POLANCO":{ops:"Guillermo Villalva",city:"CDMX"},"04 SANTA FE":{ops:"Sergio Torres",city:"CDMX"},"05 COAPA":{ops:"Sergio Torres",city:"CDMX"},"06 SATELITE":{ops:"Sergio Torres",city:"CDMX"},"09 CHURUBUSCO":{ops:"Sergio Torres",city:"CDMX"},"10 SAN JERONIMO":{ops:"Carlos Garcia",city:"Monterrey"},"11 AZCAPOTZALCO":{ops:"Guillermo Villalva",city:"CDMX"},"12 DEL VALLE":{ops:"Guillermo Villalva",city:"CDMX"},"13 TEC":{ops:"Carlos Garcia",city:"Monterrey"},"14 JARDINES":{ops:"Selene Cabrera",city:"Guadalajara"},"15 LINDAVISTA":{ops:"Guillermo Villalva",city:"CDMX"},"16 PEDREGAL":{ops:"Guillermo Villalva",city:"CDMX"},"17 CUMBRES":{ops:"Carlos Garcia",city:"Monterrey"},"19 LA CALMA":{ops:"Selene Cabrera",city:"Guadalajara"},"20 ESMERALDA":{ops:"Sergio Torres",city:"CDMX"},"21 SANTA TERESITA":{ops:"Selene Cabrera",city:"Guadalajara"},"22 SAN NICOLAS":{ops:"Carlos Garcia",city:"Monterrey"},"23 SANTA CATARINA":{ops:"Carlos Garcia",city:"Monterrey"},"24 METEPEC":{ops:"Guillermo Villalva",city:"CDMX"},"25 TABACHINES":{ops:"Selene Cabrera",city:"Guadalajara"},"26 CIUDAD JUDICIAL":{ops:"Sergio Torres",city:"Puebla"},"27 IZTAPALAPA":{ops:"Sergio Torres",city:"CDMX"},"28 CARRETERA NACIONA":{ops:"Carlos Garcia",city:"Monterrey"},"30 LINCOLN":{ops:"Carlos Garcia",city:"Monterrey"},"31 MONTEJO":{ops:"Claudia Valdez",city:"Mérida"},"34 TLAQUEPAQUE":{ops:"Selene Cabrera",city:"Guadalajara"},"37 CANEK":{ops:"Claudia Valdez",city:"Mérida"},"38 SALTILLO CENTRO":{ops:"Carlos Garcia",city:"Monterrey"},"39 MONTERREY CENTRO":{ops:"Carlos Garcia",city:"Monterrey"},"40 JARDINES DEL VALL":{ops:"Selene Cabrera",city:"Guadalajara"},"41 VOLCANES":{ops:"Sergio Torres",city:"Puebla"},"45 ESTADIO":{ops:"Selene Cabrera",city:"Guadalajara"},"51 SAMARA":{ops:"Paulina Lima",city:"CDMX"},"52 MANACAR":{ops:"Paulina Lima",city:"CDMX"}
+  },
+  COL:{
+    "01 USAQUEN":{ops:"Laura Hernández",city:"Bogotá"},"02 PARQUE 93":{ops:"Laura Hernández",city:"Bogotá"},"03 CHAPINERO":{ops:"Laura Hernández",city:"Bogotá"},"06 COLINA":{ops:"Laura Hernández",city:"Bogotá"},"08 ANDES":{ops:"Deivis Gómez",city:"Bogotá"},"11 MANILA":{ops:"Jose Rodriguez",city:"Medellín"},"12 LAURELES":{ops:"Jose Rodriguez",city:"Medellín"},"13 CHIA":{ops:"Deivis Gómez",city:"Bogotá"},"14 ENVIGADO":{ops:"Ulises Torres",city:"Medellín"},"15 ENGATIVA":{ops:"Laura Hernández",city:"Bogotá"},"18 BELLO":{ops:"Ulises Torres",city:"Medellín"},"22 SANTA MONICA":{ops:"Juan Pablo Gómez",city:"Cali"},"24 SAN FERNANDO":{ops:"Juan Pablo Gómez",city:"Cali"},"28 PEREIRA":{ops:"Juan Pablo Gómez",city:"Pereira"},"29 ITAGUI":{ops:"Ulises Torres",city:"Medellín"},"32 BARRANQUILLA":{ops:"Juan Pablo Gómez",city:"Barranquilla"},"33 CARTAGENA":{ops:"Juan Pablo Gómez",city:"Cartagena"},"36 VILLA DEL PRADO":{ops:"Deivis Gómez",city:"Bogotá"},"38 KENNEDY":{ops:"Deivis Gómez",city:"Bogotá"},"39 SALVIO":{ops:"Kevin Ramirez",city:"Bogotá"},"42 CABECERA":{ops:"Juan Pablo Gómez",city:"Bucaramanga"},"45 VERAGUAS":{ops:"Deivis Gómez",city:"Bogotá"},"46 INGENIO":{ops:"Juan Pablo Gómez",city:"Cali"},"50 CHICO":{ops:"Diana Flórez",city:"Bogotá"},"55 TITAN":{ops:"Kevin Ramirez",city:"Bogotá"},"56 SANTAFE BOG":{ops:"Kevin Ramirez",city:"Bogotá"},"57 SANTAFE MED":{ops:"Ulises Torres",city:"Medellín"},"58 VIVA MED":{ops:"Ulises Torres",city:"Medellín"},"61 CHICO CINNABON":{ops:"Diana Flórez",city:"Bogotá"},"62 FONTANAR":{ops:"Kevin Ramirez",city:"Bogotá"},"65 CALLE 109":{ops:"Andres Pulgarin",city:"Bogotá"},"66 PLAZA CLARO CINNA":{ops:"Kevin Ramirez",city:"Bogotá"},"67 PLAZA CLARO COURT":{ops:"Andres Pulgarin",city:"Bogotá"},"69 ARRECIFE":{ops:"Juan Antonio Angel",city:"Bogotá"}
+  },
+  PER:{
+    "01 SAN ISIDRO":{ops:"Juan Camilo Vanegas",city:"Lima"},"03 LA MOLINA":{ops:"Juan Camilo Vanegas",city:"Lima"},"04 LA ALBORADA":{ops:"Juan Camilo Vanegas",city:"Lima"},"06 SURQUILLO":{ops:"Juan Camilo Vanegas",city:"Lima"}
+  }
+};
+const KNAMES_MAP = {};
+// Will be populated from Redshift data
+
+// ═══════════════════════════════════════════════════════════════
+// DATE LOGIC: last complete Sun→Sat week
+// ═══════════════════════════════════════════════════════════════
+function getDateRanges(){
+  const today=new Date();
+  const dow=today.getDay(); // 0=Sun..6=Sat
+  const daysBack=(dow+1)%7||7; // days to last Saturday
+  const lastSat=new Date(today);
+  lastSat.setDate(today.getDate()-daysBack);
+  const w2End=new Date(lastSat);
+  const w2Start=new Date(lastSat);w2Start.setDate(lastSat.getDate()-6);
+  const w1End=new Date(w2Start);w1End.setDate(w2Start.getDate()-1);
+  const w1Start=new Date(w1End);w1Start.setDate(w1End.getDate()-6);
+  const fmt=d=>d.toISOString().split('T')[0];
+  const lbl=d=>d.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+  return{
+    w2:{start:fmt(w2Start),end:fmt(w2End)},
+    w1:{start:fmt(w1Start),end:fmt(w1End)},
+    w2Label:`${lbl(w2Start)}–${lbl(w2End)}`,
+    w1Label:`${lbl(w1Start)}–${lbl(w1End)}`
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+let charts=[];
+function kc(){charts.forEach(c=>c.destroy());charts=[];}
+const sem=v=>v>=0.975?'🟢':v>=0.965?'🟡':'🔴';
+const sc=v=>v>=0.975?'var(--green)':v>=0.965?'var(--yellow)':'var(--red)';
+const bc2=v=>v>=0.975?'#22c55e':v>=0.965?'#f59e0b':'#ef4444';
+const pct=v=>(v*100).toFixed(2)+'%';
+const esc=s=>s?s.replace(/'/g,"\\'"):'';
+function dl(w2,w1){if(!w1)return'';const d=Math.round((w2-w1)*10000);return d>=0?`<span class="up">▲+${d}</span>`:`<span class="dn">▼${d}</span>`;}
+function bar(r){const c=sc(r),w=Math.max(0,Math.min(100,(r-0.9)/0.1*100));return`<div class="bar-wrap"><div class="bt"><div class="bf" style="width:${w}%;background:${c}"></div></div><span class="pct" style="color:${c}">${pct(r)}</span></div>`;}
+function stars(n){return n?'★'.repeat(Math.round(n))+'☆'.repeat(5-Math.round(n)):'—';}
+function topCause(b){
+  const ca=[{k:'q',l:'PASE'},{k:'pase',l:'PASE'},{k:'pri',l:'PRICING'},{k:'del',l:'DELIVERY'}];
+  // area
+  const areas=[{k:'q',l:'QUALITY'},{k:'pase',l:'PASE'},{k:'pri',l:'PRICING'},{k:'del',l:'DELIVERY'}];
+  let ba=areas.reduce((a,c)=>(+b[c.k]||0)>(+b[a.k]||0)?c:a);
+  const subs=[{k:'miss',l:'missing'},{k:'ntasty',l:'not_tasty'},{k:'small',l:'small_portions'},{k:'raw',l:'raw_overcooked'},{k:'wrong',l:'wrong_item'}];
+  let bs=subs.reduce((a,c)=>(+b[c.k]||0)>(+b[a.k]||0)?c:a);
+  return`${ba.l}:${bs.l}`;
+}
+function ap(t){
+  if(t.includes('PASE'))return['Checklist de despacho ítem a ítem antes de cada entrega.','Supervisión activa en pase durante Afternoon y Early Evening.','Asegurar visibilidad de notas del cliente en cocina.'];
+  if(t.includes('QUALITY')&&t.includes('raw'))return['Auditoría de temperatura de equipos de cocción.','Prueba en RTO. Si falla, escalar a Desarrollo de Producto.','Checklist de temperatura antes de despacho.'];
+  if(t.includes('PRICING')||t.includes('small'))return['Auditoría de gramaje con báscula vs ficha técnica.','Revisar foto y descripción en plataforma.','Prueba en RTO para validar porción estándar.'];
+  if(t.includes('QUALITY'))return['Prueba en RTO. Si no alcanza estándar, escalar a DP.','Revisión de montaje y mise en place en pico.','Auditoría de proveedor de materia prima.'];
+  return['Revisar empaque térmico y protocolo de sellado.','Medir tiempo de espera del domiciliario.','Supervisión en franjas Afternoon y Early Evening.'];
+}
+function wordCloud(texts){
+  const stop=new Set(['el','la','los','las','un','una','que','de','en','y','a','me','mi','no','se','es','con','lo','al','del','por','para','su','sus','fue','era','han','hay','sin','son','dos','mis','ni','vez','así','tan','ser','sus','les','eso','como','pero','muy','bien','más','este','todo','toda','si','le','te','nos','ya','ahí','cada','esto']);
+  const freq={};
+  texts.forEach(t=>{if(!t)return;t.toLowerCase().replace(/[^a-záéíóúüñ\s]/g,'').split(/\s+/).forEach(w=>{if(w.length>3&&!stop.has(w))freq[w]=(freq[w]||0)+1;});});
+  return Object.entries(freq).filter(([,n])=>n>=1).sort((a,b)=>b[1]-a[1]).slice(0,35);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE & CACHE
+// ═══════════════════════════════════════════════════════════════
+let ST={lv:'mx',ops:null,kid:null,brand:null,bgBrand:null};
+let COUNTRY='MEX';
+let DATES=null;
+const CACHE={initial:null,ops:{},kitchen:{},brand_kitchen:{},brand_global:{},comments:null};
+
+function clearCache(){Object.assign(CACHE,{initial:null,ops:{},kitchen:{},brand_kitchen:{},brand_global:{},comments:null});}
+
+// ═══════════════════════════════════════════════════════════════
+// REDSHIFT QUERY WRAPPER
+// ═══════════════════════════════════════════════════════════════
+// callMcpTool returns {content:[{type:"text", text:"JSON_STRING or error"}]}
+async function query(sql){
+  const raw = await window.cowork.callMcpTool(
+    'mcp__bc593148-2634-4c03-8558-85bc4f9f9bca__execute_query',
+    {sql}
+  );
+  // Unwrap MCP envelope
+  let r = raw;
+  if(raw && raw.content && raw.content[0] && raw.content[0].text){
+    const txt = raw.content[0].text;
+    if(txt.trim().startsWith('{') || txt.trim().startsWith('[')){
+      r = JSON.parse(txt);
+    } else {
+      // Tool returned an error message string
+      throw new Error('Redshift: ' + txt.slice(0,300));
+    }
+  }
+  if(!r || !r.rows) return [];
+  if(r.columns && Array.isArray(r.rows[0])){
+    return r.rows.map(row=>{const obj={};r.columns.forEach((c,i)=>obj[c]=row[i]);return obj;});
+  }
+  return r.rows;
+}
+
+function setStep(id,state){const el=document.getElementById(id);if(el)el.className='lstep '+(state==='done'?'done':state==='act'?'act':'');}
+function setLoadMsg(msg){const el=document.getElementById('load-msg');if(el)el.textContent=msg;}
+
+// ═══════════════════════════════════════════════════════════════
+// INITIAL LOAD: kitchens W1+W2, brands, slots, causes
+// ═══════════════════════════════════════════════════════════════
+async function loadInitial(){
+  if(CACHE.initial)return CACHE.initial;
+  const C=COUNTRY,D=DATES;
+  document.getElementById('load-steps').innerHTML=`
+    <span class="lstep" id="ls1">Cocinas W1+W2</span>
+    <span class="lstep" id="ls2">Marcas</span>
+    <span class="lstep" id="ls3">Franjas+Causas</span>
+  `;
+
+  setStep('ls1','act');setLoadMsg('Consultando IF por cocina…');
+  const kitchens=await query(`
+    SELECT kitchen_id,kitchen,city,
+      SUM(CASE WHEN order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}' THEN 1 ELSE 0 END) AS w2o,
+      SUM(CASE WHEN order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}' THEN is_complaint ELSE 0 END) AS w2c,
+      SUM(CASE WHEN order_date BETWEEN '${D.w1.start}' AND '${D.w1.end}' THEN 1 ELSE 0 END) AS w1o,
+      SUM(CASE WHEN order_date BETWEEN '${D.w1.start}' AND '${D.w1.end}' THEN is_complaint ELSE 0 END) AS w1c
+    FROM fdgy_views.ontime_infull_order
+    WHERE order_date BETWEEN '${D.w1.start}' AND '${D.w2.end}'
+      AND provider_name!='foodologypos' AND country='${C}'
+    GROUP BY kitchen_id,kitchen,city
+    HAVING SUM(CASE WHEN order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}' THEN 1 ELSE 0 END)>=30
+    ORDER BY kitchen_id`);
+  setStep('ls1','done');
+
+  // Populate KNAMES_MAP
+  kitchens.forEach(k=>{KNAMES_MAP[k.kitchen_id]=k.kitchen;});
+
+  setStep('ls2','act');setLoadMsg('Consultando marcas…');
+  const brands=await query(`
+    SELECT brand,COUNT(*) AS orders,SUM(is_complaint) AS comp,
+      ROUND(1.0-SUM(is_complaint)::float/NULLIF(COUNT(*),0),4) AS if_rate,
+      ROUND(SUM(is_complaint)::float/NULLIF(COUNT(*),0)*100,2) AS pct,
+      COUNT(DISTINCT kitchen_id) AS nk,
+      SUM(CASE WHEN reason_area LIKE '%QUALITY%' THEN 1 ELSE 0 END) AS q,
+      SUM(CASE WHEN reason_area LIKE '%PASE%' THEN 1 ELSE 0 END) AS pase,
+      SUM(CASE WHEN reason_area LIKE '%PRICING%' THEN 1 ELSE 0 END) AS pri,
+      SUM(CASE WHEN reason_area LIKE '%DELIVERY%' THEN 1 ELSE 0 END) AS del,
+      SUM(CASE WHEN reason_category LIKE '%MISSING_ITEM%' THEN 1 ELSE 0 END) AS miss,
+      SUM(CASE WHEN reason_category LIKE '%NOT_TASTY%' THEN 1 ELSE 0 END) AS ntasty,
+      SUM(CASE WHEN reason_category LIKE '%SMALL_PORTIONS%' THEN 1 ELSE 0 END) AS small,
+      SUM(CASE WHEN reason_category LIKE '%RAW_OVERCOOKED%' THEN 1 ELSE 0 END) AS raw,
+      SUM(CASE WHEN reason_category LIKE '%WRONG_ITEM%' THEN 1 ELSE 0 END) AS wrong,
+      SUM(CASE WHEN reason_category LIKE '%WRONG_TEMPERATURE%' THEN 1 ELSE 0 END) AS wrongtemp,
+      SUM(CASE WHEN reason_category LIKE '%BAD_PRESENTATION%' THEN 1 ELSE 0 END) AS badpres,
+      SUM(CASE WHEN reason_category LIKE '%DAMAGE_ITEM%' THEN 1 ELSE 0 END) AS damage
+    FROM fdgy_views.ontime_infull_order
+    WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND provider_name!='foodologypos' AND country='${C}'
+    GROUP BY brand HAVING COUNT(*)>=200
+    ORDER BY SUM(is_complaint)::float/NULLIF(COUNT(*),0)*100 DESC LIMIT 25`);
+
+  setStep('ls3','act');setLoadMsg('Consultando franjas horarias…');
+  const [slots,causes]=await Promise.all([
+    query(`SELECT time_slot,COUNT(*) AS orders,SUM(is_complaint) AS comp,
+      ROUND(1.0-SUM(is_complaint)::float/NULLIF(COUNT(*),0),4) AS if_rate
+      FROM fdgy_views.ontime_infull_order
+      WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND provider_name!='foodologypos' AND country='${C}'
+      GROUP BY time_slot HAVING COUNT(*)>=30
+      ORDER BY SUM(is_complaint)::float/NULLIF(COUNT(*),0) DESC`),
+    query(`SELECT
+      SUM(CASE WHEN reason_area LIKE '%QUALITY%' THEN 1 ELSE 0 END) AS quality,
+      SUM(CASE WHEN reason_area LIKE '%PASE%' THEN 1 ELSE 0 END) AS pase,
+      SUM(CASE WHEN reason_area LIKE '%PRICING%' THEN 1 ELSE 0 END) AS pricing,
+      SUM(CASE WHEN reason_area LIKE '%DELIVERY%' THEN 1 ELSE 0 END) AS delivery
+      FROM fdgy_views.ontime_infull_order
+      WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND is_complaint=1 AND provider_name!='foodologypos' AND country='${C}'`)
+  ]);
+  setStep('ls3','done');
+  CACHE.initial={kitchens,brands,slots,causes:causes[0]||{}};
+  return CACHE.initial;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD KITCHEN DETAIL (brands + day/slot)
+// ═══════════════════════════════════════════════════════════════
+async function loadKitchen(kid){
+  if(CACHE.kitchen[kid])return CACHE.kitchen[kid];
+  const C=COUNTRY,D=DATES;
+  const [brands,cal]=await Promise.all([
+    query(`SELECT brand,COUNT(*) AS orders,SUM(is_complaint) AS comp,
+      ROUND(1.0-SUM(is_complaint)::float/NULLIF(COUNT(*),0),4) AS if_rate,
+      ROUND(SUM(is_complaint)::float/NULLIF(COUNT(*),0)*100,2) AS pct,
+      SUM(CASE WHEN reason_area LIKE '%QUALITY%' THEN 1 ELSE 0 END) AS q,
+      SUM(CASE WHEN reason_area LIKE '%PASE%' THEN 1 ELSE 0 END) AS pase,
+      SUM(CASE WHEN reason_area LIKE '%PRICING%' THEN 1 ELSE 0 END) AS pri,
+      SUM(CASE WHEN reason_area LIKE '%DELIVERY%' THEN 1 ELSE 0 END) AS del,
+      SUM(CASE WHEN reason_category LIKE '%MISSING_ITEM%' THEN 1 ELSE 0 END) AS miss,
+      SUM(CASE WHEN reason_category LIKE '%NOT_TASTY%' THEN 1 ELSE 0 END) AS ntasty,
+      SUM(CASE WHEN reason_category LIKE '%SMALL_PORTIONS%' THEN 1 ELSE 0 END) AS small,
+      SUM(CASE WHEN reason_category LIKE '%RAW_OVERCOOKED%' THEN 1 ELSE 0 END) AS raw,
+      SUM(CASE WHEN reason_category LIKE '%WRONG_ITEM%' THEN 1 ELSE 0 END) AS wrong,
+      SUM(CASE WHEN reason_category LIKE '%WRONG_TEMPERATURE%' THEN 1 ELSE 0 END) AS wrongtemp
+      FROM fdgy_views.ontime_infull_order
+      WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND provider_name!='foodologypos' AND country='${C}' AND kitchen_id='${kid}'
+      GROUP BY brand HAVING COUNT(*)>=20 ORDER BY SUM(is_complaint)::float/NULLIF(COUNT(*),0)*100 DESC`),
+    query(`SELECT
+      CASE EXTRACT(DOW FROM order_date)
+        WHEN 0 THEN 'Dom' WHEN 1 THEN 'Lun' WHEN 2 THEN 'Mar'
+        WHEN 3 THEN 'Mié' WHEN 4 THEN 'Jue' WHEN 5 THEN 'Vie' WHEN 6 THEN 'Sáb'
+      END AS day_name,
+      EXTRACT(DOW FROM order_date)::int AS dow,
+      time_slot,COUNT(*) AS orders,SUM(is_complaint) AS comp
+      FROM fdgy_views.ontime_infull_order
+      WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND provider_name!='foodologypos' AND country='${C}' AND kitchen_id='${kid}'
+      GROUP BY day_name,dow,time_slot ORDER BY dow,time_slot`)
+  ]);
+  // Build day/slot aggregates
+  const daysMap={},slotsMap={};
+  cal.forEach(r=>{
+    const d=+r.dow;
+    if(!daysMap[d])daysMap[d]={day:r.day_name,orders:0,comp:0};
+    daysMap[d].orders+=+r.orders;daysMap[d].comp+=+r.comp;
+    const s=r.time_slot.split('.')[1];
+    if(!slotsMap[s])slotsMap[s]={orders:0,comp:0};
+    slotsMap[s].orders+=+r.orders;slotsMap[s].comp+=+r.comp;
+  });
+  const dow_order=[1,2,3,4,5,6,0];
+  const slot_order=['Early Morning','Morning','Lunch','Afternoon','Early Evening','Late Evening'];
+  const days=dow_order.filter(d=>daysMap[d]).map(d=>({...daysMap[d],if:daysMap[d].orders?1-daysMap[d].comp/daysMap[d].orders:1}));
+  const slots2=slot_order.filter(s=>slotsMap[s]).map(s=>({slot:s,...slotsMap[s],if:slotsMap[s].orders?1-slotsMap[s].comp/slotsMap[s].orders:1}));
+  CACHE.kitchen[kid]={brands,days,slots:slots2};
+  return CACHE.kitchen[kid];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD BRAND+KITCHEN DETAIL (dishes + comments)
+// ═══════════════════════════════════════════════════════════════
+async function loadBrandKitchen(kid,brand){
+  const key=`${brand}||${kid}`;
+  if(CACHE.brand_kitchen[key])return CACHE.brand_kitchen[key];
+  const C=COUNTRY,D=DATES;
+  const bEsc=brand.replace(/'/g,"''");
+  const [dishes,comments]=await Promise.all([
+    query(`WITH coids AS(SELECT DISTINCT order_id FROM fdgy_views.ontime_infull_order
+      WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND is_complaint=1 AND provider_name!='foodologypos' AND country='${C}' AND kitchen_id='${kid}')
+      SELECT TRIM(s.name) AS dish_name,COUNT(DISTINCT s.order_id) AS total_orders,
+        COUNT(DISTINCT CASE WHEN c.order_id IS NOT NULL THEN s.order_id END) AS complaint_orders,
+        ROUND(AVG(CASE WHEN s.rating_score IS NOT NULL THEN s.rating_score END)::float,1) AS avg_rating
+      FROM fdgy_views.ontime_infull_sku s LEFT JOIN coids c ON s.order_id=c.order_id
+      WHERE s.received_at_local BETWEEN '${D.w2.start}' AND '${D.w2.end}' AND s.provider_name!='foodologypos'
+        AND s.country='${C}' AND s.kitchen_id='${kid}' AND s.brand='${bEsc}'
+        AND s.name IS NOT NULL AND TRIM(s.name)!=''
+      GROUP BY TRIM(s.name)
+      HAVING COUNT(DISTINCT CASE WHEN c.order_id IS NOT NULL THEN s.order_id END)>=1
+        AND COUNT(DISTINCT s.order_id)>=5
+      ORDER BY complaint_orders DESC LIMIT 8`),
+    query(`SELECT LEFT(LOWER(TRIM(comments)),100) AS comment,rating,reason_category,reason_area
+      FROM fdgy_views.ontime_infull_order
+      WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND is_complaint=1 AND comments IS NOT NULL AND LENGTH(TRIM(comments))>8
+      AND provider_name!='foodologypos' AND country='${C}'
+      AND kitchen_id='${kid}' AND brand='${bEsc}'
+      ORDER BY order_date DESC LIMIT 8`)
+  ]);
+  CACHE.brand_kitchen[key]={dishes,comments};
+  return CACHE.brand_kitchen[key];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD BRAND GLOBAL (kitchen ranking + causes)
+// ═══════════════════════════════════════════════════════════════
+async function loadBrandGlobal(brand){
+  if(CACHE.brand_global[brand])return CACHE.brand_global[brand];
+  const C=COUNTRY,D=DATES;
+  const bEsc=brand.replace(/'/g,"''");
+  const [kitchens,cmtRows,dishRows]=await Promise.all([
+    query(`SELECT kitchen_id,kitchen,COUNT(*) AS orders,SUM(is_complaint) AS comp,
+        ROUND(1.0-SUM(is_complaint)::float/NULLIF(COUNT(*),0),4) AS if_rate,
+        ROUND(SUM(is_complaint)::float/NULLIF(COUNT(*),0)*100,2) AS pct
+        FROM fdgy_views.ontime_infull_order
+        WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+        AND provider_name!='foodologypos' AND country='${C}' AND brand='${bEsc}'
+        GROUP BY kitchen_id,kitchen HAVING COUNT(*)>=20
+        ORDER BY (1.0 - SUM(is_complaint)::float/NULLIF(COUNT(*),0)) ASC`),
+    query(`SELECT LEFT(LOWER(TRIM(comments)),120) AS comment,rating
+        FROM fdgy_views.ontime_infull_order
+        WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+        AND is_complaint=1 AND comments IS NOT NULL AND LENGTH(TRIM(comments))>8
+        AND TRIM(comments) NOT LIKE ',%'
+        AND provider_name!='foodologypos' AND country='${C}' AND brand='${bEsc}'
+        ORDER BY order_date DESC LIMIT 50`),
+    query(`WITH coids AS(SELECT DISTINCT order_id FROM fdgy_views.ontime_infull_order
+        WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+        AND is_complaint=1 AND provider_name!='foodologypos' AND country='${C}' AND brand='${bEsc}')
+        SELECT TRIM(s.name) AS dish_name,
+        COUNT(DISTINCT s.order_id) AS total_orders,
+        COUNT(DISTINCT CASE WHEN c.order_id IS NOT NULL THEN s.order_id END) AS complaint_orders,
+        ROUND(AVG(CASE WHEN s.rating_score IS NOT NULL THEN s.rating_score END)::float,1) AS avg_rating
+        FROM fdgy_views.ontime_infull_sku s LEFT JOIN coids c ON s.order_id=c.order_id
+        WHERE s.received_at_local BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+        AND s.provider_name!='foodologypos' AND s.country='${C}' AND s.brand='${bEsc}'
+        AND s.name IS NOT NULL AND TRIM(s.name)!=''
+        GROUP BY TRIM(s.name)
+        HAVING COUNT(DISTINCT CASE WHEN c.order_id IS NOT NULL THEN s.order_id END)>=1
+        AND COUNT(DISTINCT s.order_id)>=8
+        ORDER BY complaint_orders DESC LIMIT 10`)
+  ]);
+  const comments=cmtRows.map(r=>r.comment).filter(Boolean);
+  const dishes=dishRows;
+  CACHE.brand_global[brand]={kitchens,comments,dishes};
+  return CACHE.brand_global[brand];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD ALL COMMENTS (for Comments tab)
+// ═══════════════════════════════════════════════════════════════
+async function loadComments(){
+  if(CACHE.comments)return CACHE.comments;
+  const C=COUNTRY,D=DATES;
+  const M=MAESTRO[C]||{};
+  const rows=await query(`
+    SELECT kitchen_id,kitchen,brand,
+      LEFT(LOWER(TRIM(comments)),110) AS comment,rating,reason_category
+    FROM fdgy_views.ontime_infull_order
+    WHERE order_date BETWEEN '${D.w2.start}' AND '${D.w2.end}'
+      AND is_complaint=1 AND comments IS NOT NULL AND LENGTH(TRIM(comments))>8
+      AND TRIM(comments) NOT LIKE ',%'
+      AND provider_name!='foodologypos' AND country='${C}'
+    ORDER BY kitchen_id,brand,order_date DESC LIMIT 600`);
+  // Deduplicate by kitchen+brand+comment
+  const seen=new Set();
+  const deduped=rows.filter(r=>{const k=r.kitchen_id+'|'+r.brand+'|'+r.comment;if(seen.has(k))return false;seen.add(k);return true;});
+  CACHE.comments=deduped.map(r=>({
+    kid:r.kitchen_id,kitchen:r.kitchen,
+    ops:(M[r.kitchen_id]||{}).ops||'Sin asignar',
+    brand:r.brand,text:r.comment,rating:r.rating?+r.rating:null,
+    cat:r.reason_category||''
+  }));
+  return CACHE.comments;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function go(lv,ops=null,kid=null,brand=null){
+  kc();
+  ST={lv,ops,kid,brand,bgBrand:null};
+  updateBC();
+  renderLevel();
+}
+function goBG(brand){kc();ST={lv:'brand_global',ops:null,kid:null,brand,bgBrand:null};updateBC();renderLevel();}
+
+function updateBC(){
+  const el=document.getElementById('bc');
+  const cname={MEX:'🇲🇽 México',COL:'🇨🇴 Colombia',PER:'🇵🇪 Perú'}[COUNTRY];
+  let h=`<span class="link" onclick="go('mx')">${cname}</span>`;
+  if(ST.lv==='brand_global'){h+=`<span class="sep">/</span><span>🏷️ ${ST.brand}</span>`;}
+  else{
+    if(ST.ops)h+=`<span class="sep">/</span><span class="link" onclick="go('ops','${esc(ST.ops)}')">👤 ${ST.ops}</span>`;
+    if(ST.kid){
+      const kn=KNAMES_MAP[ST.kid]||ST.kid;
+      if(ST.brand)h+=`<span class="sep">/</span><span class="link" onclick="go('kitchen','${esc(ST.ops)}','${esc(ST.kid)}')">🏪 ${kn}</span><span class="sep">/</span><span>🏷️ ${ST.brand}</span>`;
+      else h+=`<span class="sep">/</span><span>🏪 ${kn}</span>`;
+    }
+  }
+  el.innerHTML=h;
+}
+
+function showLoader(msg='Consultando…'){
+  document.getElementById('loader').style.display='block';
+  document.getElementById('app').style.display='none';
+  document.getElementById('load-steps').innerHTML='';
+  setLoadMsg(msg);
+}
+function showApp(html){
+  document.getElementById('loader').style.display='none';
+  const app=document.getElementById('app');
+  app.innerHTML=html;
+  app.style.display='block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER DISPATCHER
+// ═══════════════════════════════════════════════════════════════
+async function renderLevel(){
+  try{
+    if(ST.lv==='mx') await renderMx();
+    else if(ST.lv==='ops') await renderOps(ST.ops);
+    else if(ST.lv==='kitchen') await renderKitchen(ST.kid);
+    else if(ST.lv==='brand') await renderBrand(ST.ops,ST.kid,ST.brand);
+    else if(ST.lv==='brand_global') await renderBrandGlobal(ST.brand);
+  }catch(e){
+    showApp(`<div style="color:var(--red);padding:30px;text-align:center">
+      <div style="font-size:16px;margin-bottom:8px">⚠️ Error al cargar</div>
+      <div style="font-size:12px;color:var(--muted)">${e}</div>
+      <button onclick="renderLevel()" style="margin-top:12px;padding:7px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer">Reintentar</button>
+    </div>`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER MEXICO
+// ═══════════════════════════════════════════════════════════════
+async function renderMx(){
+  showLoader('Consultando datos iniciales…');
+  const {kitchens,brands,slots,causes}=await loadInitial();
+  const M=MAESTRO[COUNTRY]||{};
+  const D=DATES;
+
+  const totW2o=kitchens.reduce((s,r)=>s+(+r.w2o),0);
+  const totW2c=kitchens.reduce((s,r)=>s+(+r.w2c),0);
+  const totW1o=kitchens.reduce((s,r)=>s+(+r.w1o),0);
+  const totW1c=kitchens.reduce((s,r)=>s+(+r.w1c),0);
+  const ifW2=totW2o?1-totW2c/totW2o:0;
+  const ifW1=totW1o?1-totW1c/totW1o:0;
+  const rojo=kitchens.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)<0.965).length;
+  const amari=kitchens.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)>=0.965&&(1-+r.w2c/+r.w2o)<0.975).length;
+  const verde=kitchens.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)>=0.975).length;
+
+  // Ops aggregation
+  const opsMap={};
+  kitchens.forEach(r=>{
+    const m=M[r.kitchen_id],ops=m?m.ops:'Sin asignar';
+    if(!opsMap[ops])opsMap[ops]={w2o:0,w2c:0,w1o:0,w1c:0,rojo:0,amari:0,verde:0,total:0};
+    const o=opsMap[ops];
+    o.w2o+=+r.w2o;o.w2c+=+r.w2c;o.w1o+=+r.w1o;o.w1c+=+r.w1c;o.total++;
+    const v=+r.w2o>=30?(1-+r.w2c/+r.w2o):1;
+    if(v<0.965)o.rojo++;else if(v<0.975)o.amari++;else o.verde++;
+  });
+  const opsList=Object.entries(opsMap).map(([n,v])=>({name:n,...v,ifW2:v.w2o?1-v.w2c/v.w2o:0,ifW1:v.w1o?1-v.w1c/v.w1o:0})).sort((a,b)=>a.ifW2-b.ifW2);
+
+  document.getElementById('header-meta').textContent=`W2: ${D.w2Label} | W1: ${D.w1Label} | Excluye FoodologyPos`;
+
+  showApp(`
+  <div class="scale-bar">
+    <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-right:4px">Escala IF:</span>
+    <div class="scale-item">
+      <div class="scale-dot" style="background:var(--red)"></div>
+      <span class="scale-label" style="color:var(--red)">Rojo</span>
+      <span class="scale-range">IF &lt; 96.5%</span>
+    </div>
+    <div class="scale-divider"></div>
+    <div class="scale-item">
+      <div class="scale-dot" style="background:var(--yellow)"></div>
+      <span class="scale-label" style="color:var(--yellow)">Amarillo</span>
+      <span class="scale-range">96.5% – 97.5%</span>
+    </div>
+    <div class="scale-divider"></div>
+    <div class="scale-item">
+      <div class="scale-dot" style="background:var(--green)"></div>
+      <span class="scale-label" style="color:var(--green)">Verde</span>
+      <span class="scale-range">≥ 97.5%</span>
+    </div>
+    <div class="scale-divider"></div>
+    <span style="font-size:11px;color:var(--muted)">Target: <strong style="color:var(--green)">97.5%</strong></span>
+  </div>
+  ${rojo>0?`<div class="alert"><span style="font-size:15px">🚨</span><div><strong>${rojo} cocinas en rojo</strong> requieren acción inmediata esta semana.</div></div>`:''}
+  <div class="kpi-row">
+    <div class="kpi"><div class="lbl">IF Global W2</div><div class="val" style="color:${sc(ifW2)}">${pct(ifW2)}</div><div class="dlt">${dl(ifW2,ifW1)} <span style="font-size:10px;color:var(--muted)">W1: ${pct(ifW1)}</span></div></div>
+    <div class="kpi"><div class="lbl">Pedidos W2</div><div class="val">${totW2o.toLocaleString()}</div><div class="sub">W1: ${totW1o.toLocaleString()}</div></div>
+    <div class="kpi"><div class="lbl">Quejas W2</div><div class="val" style="color:var(--red)">${totW2c}</div><div class="sub">${((totW2c/totW2o)*100).toFixed(2)}%</div></div>
+    <div class="kpi"><div class="lbl">🔴 Rojo</div><div class="val" style="color:var(--red)">${rojo}</div></div>
+    <div class="kpi"><div class="lbl">🟡 Amarillo</div><div class="val" style="color:var(--yellow)">${amari}</div></div>
+    <div class="kpi"><div class="lbl">🟢 Verde</div><div class="val" style="color:var(--green)">${verde}/${kitchens.length}</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><h3>Ops Manager — W2 vs W1</h3><span class="hint">Clic → drill-down</span></div>
+      <div class="cb"><table>
+        <tr><th>Ops Manager</th><th>IF W2</th><th>vs W1</th><th>🔴🟡🟢</th><th>Verde</th></tr>
+        ${opsList.map(o=>`<tr class="cl" onclick="go('ops','${esc(o.name)}')">
+          <td>${sem(o.ifW2)} <strong>${o.name}</strong></td>
+          <td>${bar(o.ifW2)}</td>
+          <td>${dl(o.ifW2,o.ifW1)}<br><span style="font-size:10px;color:var(--muted)">${pct(o.ifW1)}</span></td>
+          <td><span class="tag tr">${o.rojo}</span><span class="tag ty">${o.amari}</span><span class="tag tg">${o.verde}</span></td>
+          <td style="color:${o.verde===o.total?'var(--green)':o.verde===0?'var(--red)':'var(--yellow)'}">${o.verde}/${o.total}</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Franjas Horarias — W2</h3></div>
+      <div class="cwrap"><canvas id="c-slots"></canvas></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><h3>Marcas — Bubble (x=IF, tamaño=pedidos)</h3></div>
+      <div class="cwrap"><canvas id="c-bmx" class="clt"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>🏪 Cocinas — Ranking</h3></div>
+      <div class="srch"><input type="text" id="sk" placeholder="Buscar cocina…" oninput="fk(this.value)"></div>
+      <div class="cb" id="kt">${kTbl(kitchens,M)}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>🏷️ Marcas — IF y volumen W2</h3><span class="hint">Clic → detalle por cocinas</span></div>
+    <div id="brand-sort" style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;">
+      ${['brand','pct','if_rate','orders','comp'].map(k=>`<button class="sort-btn${k==='pct'?' active':''}" onclick="sortBrands('${k}',this)">${k==='brand'?'Marca':k==='pct'?'% Queja':k==='if_rate'?'IF%':k==='orders'?'Pedidos':'Quejas'}</button>`).join('')}
+    </div>
+    <div class="cb" id="bt">${brandTbl(brands,1)}</div>
+  </div>`);
+
+  // Charts
+  const slotsSorted=[...slots].sort((a,b)=>+a.time_slot.split('.')[0]-+b.time_slot.split('.')[0]);
+  charts.push(new Chart(document.getElementById('c-slots'),{type:'bar',data:{
+    labels:slotsSorted.map(s=>s.time_slot.split('.')[1]),
+    datasets:[{data:slotsSorted.map(s=>(+s.if_rate*100).toFixed(2)),backgroundColor:slotsSorted.map(s=>bc2(+s.if_rate)),borderRadius:4}]
+  },options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`IF: ${c.raw}%`}}},
+    scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b80a8',font:{size:10}}},
+      y:{min:Math.max(90,Math.floor(Math.min(...slotsSorted.map(s=>+s.if_rate*100))-1)),
+        ticks:{callback:v=>v+'%',color:'#7b80a8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}}));
+
+  buildBubble('c-bmx',brands.map(b=>({name:b.brand,orders:+b.orders,comp:+b.comp,if:+b.if_rate,pct:+b.pct})));
+}
+
+function kTbl(kitchens,M){
+  const sorted=[...kitchens].sort((a,b)=>+(+a.w2c/+a.w2o)-(+b.w2c/+b.w2o)).reverse();
+  return`<table><tr><th>Cocina</th><th>Ops</th><th>IF W2</th><th>vs W1</th><th>Quejas</th></tr>${
+    sorted.map(k=>{const m=M[k.kitchen_id],ifv=+k.w2o?1-+k.w2c/+k.w2o:0,w1if=+k.w1o?1-+k.w1c/+k.w1o:0;
+      return`<tr class="cl" onclick="go('kitchen','${esc(m?.ops)}','${esc(k.kitchen_id)}')">
+        <td>${sem(ifv)} <strong>${k.kitchen}</strong></td>
+        <td style="color:var(--muted);font-size:11px">${m?.ops||'—'}</td>
+        <td>${bar(ifv)}</td><td>${dl(ifv,w1if)}</td>
+        <td style="color:var(--red)">${k.w2c}</td>
+      </tr>`;
+    }).join('')}
+  </table>`;
+}
+function fk(q){
+  const d=CACHE.initial;if(!d)return;
+  const M=MAESTRO[COUNTRY]||{};
+  const f=d.kitchens.filter(k=>k.kitchen.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('kt').innerHTML=kTbl(f,M);
+}
+
+let _bSort='pct',_bDir=1;
+function sortBrands(col,btn){
+  document.querySelectorAll('#brand-sort .sort-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(_bSort===col)_bDir*=-1;else{_bSort=col;_bDir=1;}
+  const d=CACHE.initial;if(!d)return;
+  document.getElementById('bt').innerHTML=brandTbl(d.brands,_bDir);
+}
+function brandTbl(brands,dir){
+  const sorted=[...brands].sort((a,b)=>{
+    if(_bSort==='brand') return a.brand.localeCompare(b.brand)*_bDir;
+    return(+b[_bSort]-+a[_bSort])*_bDir;
+  });
+  return`<table><tr>
+    <th class="sort-th" onclick="sortBrands('brand',this)">Marca</th>
+    <th class="sort-th" onclick="sortBrands('pct',this)">% Queja</th>
+    <th class="sort-th" onclick="sortBrands('if_rate',this)">IF%</th>
+    <th class="sort-th" onclick="sortBrands('orders',this)">Pedidos</th>
+    <th class="sort-th" onclick="sortBrands('comp',this)">Quejas</th>
+    <th># Cocinas</th><th>Top Causa</th>
+  </tr>${sorted.map(b=>{const ifv=+b.if_rate;return`<tr class="cl" onclick="goBG('${esc(b.brand)}')">
+    <td>${sem(ifv)} <strong>${b.brand}</strong></td>
+    <td style="color:${+b.pct>5?'var(--red)':+b.pct>3?'var(--yellow)':'var(--green)'};font-weight:700">${(+b.pct).toFixed(2)}%</td>
+    <td>${bar(ifv)}</td>
+    <td>${(+b.orders).toLocaleString()}</td>
+    <td style="color:var(--red)">${b.comp}</td>
+    <td style="color:var(--muted)">${b.nk}</td>
+    <td style="font-size:11px;color:var(--muted)">${topCause(b)}</td>
+  </tr>`}).join('')}</table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER OPS
+// ═══════════════════════════════════════════════════════════════
+async function renderOps(opsName){
+  showLoader(`Cargando portafolio de ${opsName}…`);
+  const {kitchens,brands}=await loadInitial();
+  const M=MAESTRO[COUNTRY]||{};
+  const myKitchens=kitchens.filter(r=>(M[r.kitchen_id]||{}).ops===opsName);
+  const tots={w2o:0,w2c:0,w1o:0,w1c:0};
+  myKitchens.forEach(r=>{tots.w2o+=+r.w2o;tots.w2c+=+r.w2c;tots.w1o+=+r.w1o;tots.w1c+=+r.w1c;});
+  const ifW2=tots.w2o?1-tots.w2c/tots.w2o:0,ifW1=tots.w1o?1-tots.w1c/tots.w1o:0;
+  const rojo=myKitchens.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)<0.965).length;
+  const verde=myKitchens.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)>=0.975).length;
+
+  // Brand map for this ops
+  const bmap={};
+  // We need brand data per kitchen - load on demand if needed
+  // For now show global brands filtered... We'll load kitchen brand data
+  // Actually load brands for this ops' kitchens from initial (approximate from global)
+  const opsKids=myKitchens.map(r=>r.kitchen_id);
+
+  const sorted=[...myKitchens].sort((a,b)=>(+a.w2c/+a.w2o)-(+b.w2c/+b.w2o));
+
+  showApp(`
+  <div class="kpi-row">
+    <div class="kpi"><div class="lbl">IF ${opsName}</div><div class="val" style="color:${sc(ifW2)}">${pct(ifW2)}</div><div class="dlt">${dl(ifW2,ifW1)} W1: ${pct(ifW1)}</div></div>
+    <div class="kpi"><div class="lbl">Pedidos</div><div class="val">${tots.w2o.toLocaleString()}</div><div class="sub">${myKitchens.length} cocinas</div></div>
+    <div class="kpi"><div class="lbl">Quejas</div><div class="val" style="color:var(--red)">${tots.w2c}</div><div class="sub">${((tots.w2c/tots.w2o)*100).toFixed(2)}%</div></div>
+    <div class="kpi"><div class="lbl">🔴 Rojo</div><div class="val" style="color:var(--red)">${rojo}</div></div>
+    <div class="kpi"><div class="lbl">🟢 Verde</div><div class="val" style="color:var(--green)">${verde}/${myKitchens.length}</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><h3>Cocinas — Clic → drill-down</h3></div>
+      <div class="cb"><table>
+        <tr><th>Cocina</th><th>IF W2</th><th>vs W1</th><th>Quejas</th><th>Ciudad</th></tr>
+        ${sorted.map(r=>{const ifv=+r.w2o?1-+r.w2c/+r.w2o:0,w1if=+r.w1o?1-+r.w1c/+r.w1o:0;
+          return`<tr class="cl" onclick="go('kitchen','${esc(opsName)}','${esc(r.kitchen_id)}')">
+            <td>${sem(ifv)} <strong>${r.kitchen}</strong></td><td>${bar(ifv)}</td>
+            <td>${dl(ifv,w1if)}</td>
+            <td style="color:var(--red)">${r.w2c} <span style="color:var(--muted);font-size:10px">(${((+r.w2c/+r.w2o)*100).toFixed(1)}%)</span></td>
+            <td style="color:var(--muted)">${(M[r.kitchen_id]||{}).city||''}</td>
+          </tr>`;
+        }).join('')}
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Marcas del portafolio — W2</h3></div>
+      <div class="cwrap"><canvas id="c-bops" class="clt"></canvas></div>
+    </div>
+  </div>`);
+
+  // Bubble with global brands (approximate for this ops)
+  buildBubble('c-bops',brands.map(b=>({name:b.brand,orders:+b.orders,comp:+b.comp,if:+b.if_rate,pct:+b.pct})));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER KITCHEN
+// ═══════════════════════════════════════════════════════════════
+async function renderKitchen(kid){
+  showLoader('Cargando datos de la cocina…');
+  const {kitchens}=await loadInitial();
+  const kd=kitchens.find(r=>r.kitchen_id===kid);
+  if(!kd){showApp('<div class="empty">Cocina no encontrada</div>');return;}
+  const kn=kd.kitchen;
+  const m=MAESTRO[COUNTRY][kid]||{};
+  const ifW2=+kd.w2o?1-+kd.w2c/+kd.w2o:0;
+  const ifW1=+kd.w1o?1-+kd.w1c/+kd.w1o:0;
+  const {brands,days,slots}=await loadKitchen(kid);
+  const tb=brands[0];
+  const tcs=tb?topCause(tb):'';
+  const acs=ap(tcs);
+
+  showApp(`
+  <div class="kpi-row">
+    <div class="kpi"><div class="lbl">${kn}</div><div class="val" style="color:${sc(ifW2)}">${pct(ifW2)}</div><div class="dlt">${dl(ifW2,ifW1)} W1: ${pct(ifW1)}</div></div>
+    <div class="kpi"><div class="lbl">Pedidos</div><div class="val">${(+kd.w2o).toLocaleString()}</div><div class="sub">${(+kd.w2c/+kd.w2o*100).toFixed(2)}% de ${kd.w2o} pedidos</div></div>
+    <div class="kpi"><div class="lbl">Quejas</div><div class="val" style="color:var(--red)">${kd.w2c}</div></div>
+    <div class="kpi"><div class="lbl">Ops Manager</div><div class="val" style="font-size:14px">${m.ops||'—'}</div><div class="sub">${m.city||''}</div></div>
+    <div class="kpi"><div class="lbl">Marca crítica</div><div class="val" style="font-size:13px">${tb?tb.brand:'—'}</div><div class="sub" style="color:var(--red)">${tb?pct(+tb.if_rate):''}</div></div>
+  </div>
+  ${days.length>0?`<div class="two">
+    <div class="card"><div class="ch"><h3>IF por Día de la Semana</h3></div>
+      <div class="cwrap"><canvas id="c-kdays"></canvas></div></div>
+    <div class="card"><div class="ch"><h3>IF por Franja Horaria</h3></div>
+      <div class="cwrap"><canvas id="c-kslots"></canvas></div></div>
+  </div>`:''}
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><h3>Marcas — Clic → platos y comentarios 🍽️</h3></div>
+      <div class="cb"><table>
+        <tr><th>Marca</th><th>Pedidos</th><th>% cocina</th><th>IF%</th><th>Quejas</th><th>Top causa</th></tr>
+        ${brands.map(b=>{const kp=((+b.orders/+kd.w2o)*100).toFixed(1);return`<tr class="cl" onclick="go('brand','${esc(m.ops)}','${esc(kid)}','${esc(b.brand)}')">
+          <td>${sem(+b.if_rate)} <strong>${b.brand}</strong> <span class="bchip">🍽️</span></td>
+          <td style="color:var(--muted)">${(+b.orders).toLocaleString()}</td>
+          <td style="color:var(--muted)">${kp}%</td>
+          <td>${bar(+b.if_rate)}</td>
+          <td style="color:var(--red)">${b.comp}</td>
+          <td style="font-size:11px;color:var(--muted)">${topCause(b)}</td>
+        </tr>`}).join('')}
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Marcas — Bubble</h3></div>
+      <div class="cwrap"><canvas id="c-bk" class="clt"></canvas></div>
+    </div>
+  </div>
+  <div class="two">
+    <div class="card"><div class="ch"><h3>Causas de Queja</h3></div>
+      <div class="cwrap"><canvas id="c-causes"></canvas></div></div>
+    <div class="card">
+      <div class="ch"><h3>📋 Plan de Acción — ${kn}</h3></div>
+      <div class="ax" style="margin-top:12px">
+        <h4>Causa dominante: ${tcs}</h4>
+        ${acs.map((a,i)=>`<div class="ai"><div class="an">${i+1}</div><div>${a}</div></div>`).join('')}
+        ${tb?`<div class="ai"><div class="an" style="background:var(--red)">★</div><div><strong>${tb.brand}</strong> — IF ${pct(+tb.if_rate)}, ${tb.comp} quejas.</div></div>`:''}
+        <div class="ai"><div class="an" style="background:var(--muted)">⏰</div><div>Franjas críticas: <strong>Afternoon</strong> y <strong>Early Evening</strong>.</div></div>
+      </div>
+    </div>
+  </div>`);
+
+  // Charts
+  if(days.length>0){
+    const mn=Math.max(87,Math.floor(Math.min(...days.map(d=>d.if*100))-1));
+    charts.push(new Chart(document.getElementById('c-kdays'),{type:'bar',data:{
+      labels:days.map(d=>d.day),
+      datasets:[{data:days.map(d=>+(d.if*100).toFixed(2)),backgroundColor:days.map(d=>bc2(d.if)),borderRadius:4}]
+    },options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`IF: ${c.raw}% | ${days[c.dataIndex].comp} quejas / ${days[c.dataIndex].orders} pedidos`}}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b80a8',font:{size:10}}},
+        y:{min:mn,ticks:{callback:v=>v+'%',color:'#7b80a8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}
+    }));
+    if(slots.length>0){
+      const mn2=Math.max(87,Math.floor(Math.min(...slots.map(s=>s.if*100))-1));
+      charts.push(new Chart(document.getElementById('c-kslots'),{type:'bar',data:{
+        labels:slots.map(s=>s.slot),
+        datasets:[{data:slots.map(s=>+(s.if*100).toFixed(2)),backgroundColor:slots.map(s=>bc2(s.if)),borderRadius:4}]
+      },options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`IF: ${c.raw}% | ${slots[c.dataIndex].comp} quejas`}}},
+        scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b80a8',font:{size:10}}},
+          y:{min:mn2,ticks:{callback:v=>v+'%',color:'#7b80a8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}
+      }));
+    }
+  }
+  buildBubble('c-bk',brands.map(b=>({name:b.brand,orders:+b.orders,comp:+b.comp,if:+b.if_rate,pct:+b.pct})));
+  // Causes donut
+  const ag={q:0,pase:0,pri:0,del:0};
+  brands.forEach(b=>{ag.q+=+b.q||0;ag.pase+=+b.pase||0;ag.pri+=+b.pri||0;ag.del+=+b.del||0;});
+  charts.push(new Chart(document.getElementById('c-causes'),{type:'doughnut',data:{
+    labels:['QUALITY','PASE','PRICING','DELIVERY'],
+    datasets:[{data:[ag.q,ag.pase,ag.pri,ag.del],backgroundColor:['#ef4444','#818cf8','#f59e0b','#22c55e'],borderWidth:0}]
+  },options:{plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:11}}}}}}));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER BRAND (in kitchen context)
+// ═══════════════════════════════════════════════════════════════
+async function renderBrand(opsName,kid,brandName){
+  showLoader('Cargando platos y comentarios…');
+  const {kitchens}=await loadInitial();
+  const kd=kitchens.find(r=>r.kitchen_id===kid);
+  const kn=kd?kd.kitchen:kid;
+  const {brands}=await loadKitchen(kid);
+  const bo=brands.find(b=>b.brand===brandName);
+  const {dishes,comments}=await loadBrandKitchen(kid,brandName);
+  const tcs=bo?topCause(bo):'';
+  const acs=ap(tcs);
+  const totalComp=dishes.reduce((s,d)=>s+(+d.complaint_orders),0);
+  const wc=wordCloud(comments.map(c=>c.comment));
+
+  showApp(`
+  <div class="kpi-row">
+    <div class="kpi"><div class="lbl">${brandName}</div><div class="val" style="color:${bo?sc(+bo.if_rate):'var(--muted)'}">${bo?pct(+bo.if_rate):'—'}</div><div class="sub">en ${kn}</div></div>
+    <div class="kpi"><div class="lbl">Pedidos</div><div class="val">${bo?(+bo.orders).toLocaleString():'—'}</div></div>
+    <div class="kpi"><div class="lbl">Quejas</div><div class="val" style="color:var(--red)">${bo?bo.comp:'—'}</div><div class="sub">${bo?((+bo.comp/+bo.orders)*100).toFixed(2)+'%':''}</div></div>
+    <div class="kpi"><div class="lbl">% del volumen</div><div class="val" style="font-size:16px">${kd&&bo?(((+bo.orders/+kd.w2o)*100).toFixed(1)+'%'):'—'}</div></div>
+    <div class="kpi"><div class="lbl">Causa principal</div><div class="val" style="font-size:11px;color:var(--accent)">${tcs||'—'}</div></div>
+  </div>
+  <div class="g2">
+    ${dishes.length>0?`<div class="card">
+      <div class="ch"><h3>🍽️ Platos con más quejas</h3><span class="hint"># pedidos con queja que contenían el plato</span></div>
+      <div class="cb"><table>
+        <tr><th>#</th><th>Plato</th><th>Pedidos</th><th>Rating</th><th># Quejas</th><th>% del total</th></tr>
+        ${dishes.map((d,i)=>{const rc=i===0?'r1':i===1?'r2':i===2?'r3':'';
+          const pp=totalComp>0?Math.round(+d.complaint_orders/totalComp*100)+'%':'—';
+          const bw=dishes[0].complaint_orders>0?Math.round(+d.complaint_orders/+dishes[0].complaint_orders*100):0;
+          return`<tr><td><span class="rnk ${rc}">${i+1}</span></td>
+            <td><strong>${d.dish_name}</strong></td>
+            <td style="color:var(--muted)">${d.total_orders}</td>
+            <td><span class="star">${d.avg_rating?stars(+d.avg_rating):'—'}</span></td>
+            <td><div class="bar-wrap"><div class="bt" style="width:80px"><div class="bf" style="width:${bw}%;background:var(--red)"></div></div>
+              <span style="color:var(--red);font-weight:600">${d.complaint_orders}</span></div></td>
+            <td style="color:var(--muted)">${pp}</td>
+          </tr>`;}).join('')}
+      </table></div>
+    </div>
+    <div class="card"><div class="ch"><h3>Distribución por plato</h3></div>
+      <div class="cwrap"><canvas id="c-dishes"></canvas></div>
+    </div>`:`<div class="card" style="grid-column:1/-1"><div class="cb"><div class="empty">Sin datos de platos para esta marca en esta cocina.</div></div></div>`}
+  </div>
+  ${wc.length>0?`<div class="card">
+    <div class="ch"><h3>💬 Nube de palabras — comentarios de clientes</h3></div>
+    <div class="cwrap" style="min-height:100px;display:flex;flex-wrap:wrap;gap:5px;align-items:center">
+      ${wc.map(([w,n])=>`<span style="font-size:${Math.max(11,Math.min(26,11+n*4))}px;color:${n>3?'var(--accent)':n>1?'var(--yellow)':'var(--muted)'};font-weight:${n>2?'700':'400'}">${w}</span>`).join(' ')}
+    </div>
+    <div style="padding:0 14px 12px">
+      ${comments.map(c=>{const bad=c.rating!==null&&c.rating<=2;return`<div class="cmt-box ${bad?'bad':''}">
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <span>"${c.comment}"</span>
+          ${c.rating!==null?`<span class="star" style="white-space:nowrap;font-size:11px">${stars(c.rating)}</span>`:''}
+        </div>
+      </div>`;}).join('')}
+    </div>
+  </div>`:''}
+  <div class="card"><div class="ch"><h3>📋 Plan de Acción — ${brandName} en ${kn}</h3></div>
+    <div class="ax" style="margin-top:12px">
+      <h4>Causa dominante: ${tcs||'—'}</h4>
+      ${acs.map((a,i)=>`<div class="ai"><div class="an">${i+1}</div><div>${a}</div></div>`).join('')}
+      ${dishes.length>0?`<div class="ai"><div class="an" style="background:var(--red)">🍽️</div><div>Plato crítico: <strong>${dishes[0].dish_name}</strong> — ${dishes[0].complaint_orders} quejas en ${dishes[0].total_orders} pedidos. Rating: ${dishes[0].avg_rating||'N/D'}/5.</div></div>`:''}
+      <div class="ai"><div class="an" style="background:var(--muted)">📅</div><div>Seguimiento: medir IF semana siguiente. Target: ≥97.5%</div></div>
+    </div>
+  </div>`);
+
+  if(dishes.length>0){
+    charts.push(new Chart(document.getElementById('c-dishes'),{type:'bar',data:{
+      labels:dishes.map(d=>d.dish_name.length>22?d.dish_name.slice(0,22)+'…':d.dish_name),
+      datasets:[{data:dishes.map(d=>+d.complaint_orders),backgroundColor:dishes.map((_,i)=>i===0?'#ef4444':i===1?'#f59e0b':'#818cf8'),borderRadius:4}]
+    },options:{indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#7b80a8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7b80a8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}}));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER BRAND GLOBAL (from México tab)
+// ═══════════════════════════════════════════════════════════════
+// Helper: WC + dishes card (uses string concat to avoid nested template literals)
+function buildWCCard(brandName,wc,comments,dishes){
+  let html='';
+  if(wc&&wc.length>0){
+    html+='<div class="card"><div class="ch"><h3>💬 Nube de palabras</h3><span class="hint">'+(comments?comments.length:0)+' comentarios esta semana</span></div>';
+    html+='<div class="cwrap" style="min-height:80px;display:flex;flex-wrap:wrap;gap:5px;align-items:center">';
+    wc.forEach(function([w,n]){
+      const fs=Math.max(10,Math.min(26,10+n*4));
+      const col=n>3?'var(--accent)':n>1?'var(--yellow)':'var(--muted)';
+      const fw=n>2?700:400;
+      html+='<span style="font-size:'+fs+'px;color:'+col+';font-weight:'+fw+'">'+w+'</span> ';
+    });
+    html+='</div></div>';
+  }
+  // Always show dishes section
+  html+='<div class="card"><div class="ch"><h3>🍽️ Platos con más quejas — '+brandName+'</h3><span class="hint">Top 10 en todas las cocinas esta semana</span></div>';
+  if(dishes&&dishes.length>0){
+    html+='<div class="cb"><table>';
+    html+='<tr><th>#</th><th>Plato</th><th>Pedidos</th><th>Rating</th><th># Quejas</th><th>% pedidos</th></tr>';
+    dishes.forEach(function(d,i){
+      const rc=i===0?'r1':i===1?'r2':i===2?'r3':'';
+      const comp=+d.complaint_orders,total=+d.total_orders;
+      const pctV=total>0?((comp/total)*100).toFixed(1):'—';
+      const bw=dishes[0].complaint_orders>0?Math.round(comp/+dishes[0].complaint_orders*100):0;
+      const ratingHtml=d.avg_rating?stars(+d.avg_rating):'—';
+      html+='<tr><td><span class="rnk '+rc+'">'+(i+1)+'</span></td>';
+      html+='<td><strong>'+d.dish_name+'</strong></td>';
+      html+='<td style="color:var(--muted)">'+total+'</td>';
+      html+='<td><span class="star">'+ratingHtml+'</span></td>';
+      html+='<td><div class="bar-wrap"><div class="bt" style="width:80px"><div class="bf" style="width:'+bw+'%;background:var(--red)"></div></div><span style="color:var(--red);font-weight:600;font-size:12px">'+comp+'</span></div></td>';
+      html+='<td style="color:var(--muted);font-size:11px">'+pctV+'%</td></tr>';
+    });
+    html+='</table></div>';
+  } else {
+    html+='<div style="padding:14px;color:var(--muted);font-size:12px;text-align:center">Cargando datos de platos…'+(dishes===undefined?' (query pendiente)':dishes&&dishes.length===0?' (sin datos suficientes)':'')+'</div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+async function renderBrandGlobal(brandName){
+  showLoader(`Cargando datos de ${brandName}…`);
+  const {brands}=await loadInitial();
+  const M=MAESTRO[COUNTRY]||{};
+  const b=brands.find(x=>x.brand===brandName);
+  const {kitchens,comments,dishes}=await loadBrandGlobal(brandName);
+  const tcs=b?topCause(b):'';
+  const allTexts=[...comments.map(c=>c.comment),...(CACHE.comments||[]).filter(c=>c.brand===brandName).map(c=>c.text)];
+  const wc=wordCloud(allTexts);
+  const cmts=comments;
+
+  showApp(`
+  <div class="kpi-row">
+    <div class="kpi"><div class="lbl">${brandName}</div><div class="val" style="color:${b?sc(+b.if_rate):'var(--muted)'}">${b?pct(+b.if_rate):'—'}</div><div class="sub">IF global W2</div></div>
+    <div class="kpi"><div class="lbl">Pedidos</div><div class="val">${b?(+b.orders).toLocaleString():'—'}</div></div>
+    <div class="kpi"><div class="lbl">Quejas</div><div class="val" style="color:var(--red)">${b?b.comp:'—'}</div><div class="sub">${b?((+b.comp/+b.orders)*100).toFixed(2)+'%':''}</div></div>
+    <div class="kpi"><div class="lbl"># Cocinas</div><div class="val">${kitchens.length}</div></div>
+    <div class="kpi"><div class="lbl">Causa principal</div><div class="val" style="font-size:11px;color:var(--accent)">${tcs||'—'}</div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="ch"><h3>Área de Queja</h3></div>
+      <div class="cwrap"><canvas id="c-bg-area"></canvas></div></div>
+    <div class="card"><div class="ch"><h3>Razones Específicas</h3></div>
+      <div class="cwrap"><canvas id="c-bg-reasons"></canvas></div></div>
+  </div>
+  ${buildWCCard(brandName,wc,comments,dishes)}
+  <div class="card">
+    <div class="ch"><h3>🧠 Insights IA — ${brandName}</h3><span class="hint">Generado con los comentarios de esta semana</span></div>
+    <div id="bg-insights" style="padding:14px;">
+      <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;">
+        <div class="spin" style="width:18px;height:18px;border-width:2px;margin:0;flex-shrink:0;"></div>
+        Analizando comentarios con IA…
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>🏪 Ranking de Cocinas — ${brandName}</h3><span class="hint">Peor → mejor IF</span></div>
+    <div class="cb"><table>
+      <tr><th>Cocina</th><th>Ops Manager</th><th>IF%</th><th>Quejas%</th><th>Pedidos</th></tr>
+      ${kitchens.slice(0,20).map(k=>`<tr class="cl" onclick="go('kitchen','${esc((M[k.kitchen_id]||{}).ops||'')}','${esc(k.kitchen_id)}')">
+        <td>${sem(+k.if_rate)} ${k.kitchen}</td>
+        <td style="color:var(--muted)">${(M[k.kitchen_id]||{}).ops||'—'}</td>
+        <td>${bar(+k.if_rate)}</td>
+        <td style="color:${+k.pct>5?'var(--red)':+k.pct>3?'var(--yellow)':'var(--muted)'};font-weight:600">${(+k.pct).toFixed(2)}%</td>
+        <td style="color:var(--muted)">${(+k.orders).toLocaleString()}</td>
+      </tr>`).join('')}
+    </table></div>
+  </div>
+
+  `);
+
+  // AI Insights - called asynchronously after render
+  const insightEl=document.getElementById('bg-insights');
+  if(insightEl&&comments&&comments.length>0){
+    const cname={MEX:'México',COL:'Colombia',PER:'Perú'}[COUNTRY]||COUNTRY;
+    const bInfo=b?'IF: '+pct(+b.if_rate)+', '+b.comp+' quejas en '+b.orders+' pedidos. QUALITY:'+( +b.q||0)+' PASE:'+(+b.pase||0)+' PRICING:'+(+b.pri||0)+' DELIVERY:'+(+b.del||0)+'.':'';
+    const sample=comments.slice(0,20).map(c=>'- "'+c+'"').join('\n');
+    const prompt='Eres analista de operaciones de Foodology en '+cname+'. Analiza quejas de clientes para la marca "'+brandName+'" (semana '+DATES.w2Label+').\n\nDatos: '+bInfo+'\n\nComentarios:\n'+sample+'\n\nGenera exactamente 4 insights accionables en español, formato bullets (•). Cada uno: identifica el problema con evidencia, máximo 2 líneas, incluye acción concreta. Sin intro ni conclusión.';
+    window.cowork.askClaude(prompt,[]).then(raw=>{
+      if(!insightEl)return;
+      // askClaude may return string or MCP envelope {content:[{type:"text",text:"..."}]}
+      let res=raw;
+      if(raw&&typeof raw==='object'){
+        if(Array.isArray(raw))res=raw.map(x=>typeof x==='string'?x:(x.text||'')).join('\n');
+        else if(raw.content)res=raw.content.map(x=>x.text||'').join('\n');
+        else if(raw.text)res=raw.text;
+        else res=JSON.stringify(raw);
+      }
+      const lines=String(res).split('\n').filter(l=>l.trim().length>5);
+      insightEl.innerHTML=lines.map(l=>{
+        const t=l.trim().replace(/^[•\-\*\d\.]+\s*/,'');
+        if(!t)return'';
+        return '<div style="display:flex;gap:8px;margin-bottom:9px;font-size:12px;line-height:1.5;">'+
+          '<div style="background:var(--accent);color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;">💡</div>'+
+          '<div>'+t+'</div></div>';
+      }).join('');
+      if(!insightEl.innerHTML.trim())insightEl.innerHTML='<div style="color:var(--muted);font-size:12px">Sin insights disponibles.</div>';
+    }).catch(e=>{
+      if(insightEl)insightEl.innerHTML='<div style="color:var(--muted);font-size:12px">Error al generar insights: '+e+'</div>';
+    });
+  } else if(insightEl){
+    insightEl.innerHTML='<div style="color:var(--muted);font-size:12px">Sin comentarios suficientes para generar insights esta semana.</div>';
+  }
+
+  if(b){
+    const areas=['QUALITY','PASE','PRICING','DELIVERY'];
+    charts.push(new Chart(document.getElementById('c-bg-area'),{type:'doughnut',data:{
+      labels:areas,datasets:[{data:[+b.q||0,+b.pase||0,+b.pri||0,+b.del||0],
+        backgroundColor:['#ef4444','#818cf8','#f59e0b','#22c55e'],borderWidth:0}]
+    },options:{plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:11}}}}}}));
+    const reasons=[{l:'Missing Item',v:+b.miss||0},{l:'Not Tasty',v:+b.ntasty||0},{l:'Small Portions',v:+b.small||0},
+      {l:'Raw/Overcooked',v:+b.raw||0},{l:'Wrong Item',v:+b.wrong||0},{l:'Wrong Temp',v:+b.wrongtemp||0},
+      {l:'Bad Pres.',v:+b.badpres||0},{l:'Damage',v:+b.damage||0}].filter(r=>r.v>0).sort((a,x)=>x.v-a.v);
+    charts.push(new Chart(document.getElementById('c-bg-reasons'),{type:'bar',data:{
+      labels:reasons.map(r=>r.l),datasets:[{data:reasons.map(r=>r.v),
+        backgroundColor:reasons.map(r=>r.v===Math.max(...reasons.map(x=>x.v))?'#ef4444':'#818cf8'),borderRadius:4}]
+    },options:{indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#7b80a8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7b80a8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}}));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUBBLE CHART
+// ═══════════════════════════════════════════════════════════════
+function buildBubble(canvasId,data){
+  const el=document.getElementById(canvasId);if(!el||!data.length)return;
+  const mx=Math.max(...data.map(b=>b.orders));
+  charts.push(new Chart(el,{type:'bubble',data:{datasets:data.map(b=>({
+    label:b.name||'',
+    data:[{x:+(b.if*100).toFixed(2),y:+b.pct.toFixed(2),r:Math.max(5,Math.sqrt(b.orders/mx)*26)}],
+    backgroundColor:bc2(b.if)+'90',borderColor:bc2(b.if),borderWidth:1.5
+  }))},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const b=data[ctx.datasetIndex];return[b.name,`IF: ${pct(b.if)}`,`Quejas: ${b.pct.toFixed(2)}%`,`Pedidos: ${b.orders.toLocaleString()}`];}}}},
+    scales:{
+      x:{title:{display:true,text:'IF %',color:'#7b80a8',font:{size:10}},min:Math.max(85,Math.floor(Math.min(...data.map(b=>b.if*100))-1)),max:101,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b80a8',font:{size:10},callback:v=>v+'%'}},
+      y:{title:{display:true,text:'% Queja',color:'#7b80a8',font:{size:10}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b80a8',font:{size:10},callback:v=>v+'%'}}
+    }}}));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMMENTS TAB
+// ═══════════════════════════════════════════════════════════════
+let cmtsInited=false;
+async function initComments(){
+  if(cmtsInited)return;
+  cmtsInited=true;
+  document.getElementById('cmt-loading').style.display='block';
+  document.getElementById('cmt-list').innerHTML='';
+  try{
+    const data=await loadComments();
+    // Populate selects
+    const ops=[...new Set(data.map(c=>c.ops))].sort();
+    const ks=[...new Set(data.map(c=>c.kitchen))].sort();
+    const bs=[...new Set(data.map(c=>c.brand))].sort();
+    const opsSel=document.getElementById('flt-ops');
+    const kSel=document.getElementById('flt-k');
+    const bSel=document.getElementById('flt-b');
+    ops.forEach(o=>{const el=document.createElement('option');el.value=el.textContent=o;opsSel.appendChild(el);});
+    ks.forEach(k=>{const el=document.createElement('option');el.value=el.textContent=k;kSel.appendChild(el);});
+    bs.forEach(b=>{const el=document.createElement('option');el.value=el.textContent=b;bSel.appendChild(el);});
+    document.getElementById('cmt-loading').style.display='none';
+    filterCmts();
+  }catch(e){
+    document.getElementById('cmt-loading').innerHTML='<div style="color:var(--red)">Error: '+e+'</div>';
+  }
+}
+function filterCmts(){
+  const data=CACHE.comments||[];
+  const ops=document.getElementById('flt-ops').value;
+  const k=document.getElementById('flt-k').value;
+  const b=document.getElementById('flt-b').value;
+  const r=document.getElementById('flt-r').value;
+  const txt=document.getElementById('flt-txt').value.toLowerCase();
+  let f=data;
+  if(ops)f=f.filter(c=>c.ops===ops);
+  if(k)f=f.filter(c=>c.kitchen===k);
+  if(b)f=f.filter(c=>c.brand===b);
+  if(r==='low')f=f.filter(c=>c.rating!==null&&c.rating<=2);
+  if(r==='3')f=f.filter(c=>c.rating===3);
+  if(txt)f=f.filter(c=>c.text.includes(txt));
+  document.getElementById('cmt-count').textContent=`${f.length} comentarios`;
+  const list=document.getElementById('cmt-list');
+  if(!f.length){list.innerHTML='<div class="empty">Sin comentarios con estos filtros</div>';return;}
+  list.innerHTML=f.map(c=>`<div class="cmt-row" style="${c.rating&&c.rating<=2?'border-left:2px solid var(--red);':''}">
+    <span style="color:var(--muted);font-size:11px">${c.ops}</span>
+    <span style="color:var(--muted);font-size:11px">${c.kitchen}</span>
+    <span style="color:var(--accent);font-size:11px">${c.brand}</span>
+    <span style="color:var(--text)">"${c.text}"</span>
+    <span class="star">${c.rating!==null?stars(c.rating):'—'}</span>
+  </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB & COUNTRY SWITCH
+// ═══════════════════════════════════════════════════════════════
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='comentarios')initComments();
+}
+function switchCountry(code,btn){
+  document.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  COUNTRY=code;
+  clearCache();
+  cmtsInited=false;
+  ST={lv:'mx',ops:null,kid:null,brand:null,bgBrand:null};
+  kc();
+  DATES=getDateRanges();
+  updateBC();
+  renderLevel();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT HTML (summary static, sin drill-downs interactivos)
+// ═══════════════════════════════════════════════════════════════
+const _CSS = ":root{\n  --bg:#0d0f1a;--card:#161827;--border:#272a45;\n  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;\n  --accent:#818cf8;--muted:#7b80a8;--text:#e2e8f0;\n  --text2:#94a3b8;--hover:#1e2235;\n}\n*{box-sizing:border-box;margin:0;padding:0;}\nbody{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:13px;}\nheader{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}\nheader h1{font-size:15px;font-weight:700;color:#fff;}\nheader .meta{font-size:11px;color:var(--muted);}\n.cbtn{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}\n.cbtn.active{background:var(--accent);color:#fff;border-color:var(--accent);}\n.cbtn:hover:not(.active){border-color:var(--accent);color:var(--accent);}\n.badge{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;}\n.badge-y{background:rgba(245,158,11,.15);color:var(--yellow);}\n.badge-g{background:rgba(34,197,94,.15);color:var(--green);}\n.badge-r{background:rgba(239,68,68,.15);color:var(--red);}\n/* Tabs */\n.tab-nav{background:var(--card);border-bottom:1px solid var(--border);display:flex;padding:0 20px;}\n.tab-btn{padding:9px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}\n.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}\n.tab-content{display:none;}.tab-content.active{display:block;}\n/* Breadcrumb */\n.bc{background:var(--card);border-bottom:1px solid var(--border);padding:7px 20px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);flex-wrap:wrap;}\n.bc .link{cursor:pointer;color:var(--accent);}.bc .link:hover{text-decoration:underline;}\n.bc .sep{color:var(--border);}\n/* Loader */\n#loader{padding:60px 20px;text-align:center;color:var(--muted);}\n.spin{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;}\n@keyframes spin{to{transform:rotate(360deg)}}\n.load-steps{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px;}\n.lstep{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;background:var(--card);color:var(--muted);border:1px solid var(--border);}\n.lstep.done{border-color:var(--green);color:var(--green);}\n.lstep.act{border-color:var(--accent);color:var(--accent);}\n/* Main */\n.main{padding:16px 20px;}\n.kpi-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}\n.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 15px;min-width:120px;flex:1;}\n.kpi .lbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}\n.kpi .val{font-size:20px;font-weight:700;}\n.kpi .sub{font-size:10px;color:var(--muted);margin-top:2px;}\n.kpi .dlt{font-size:11px;font-weight:600;}\n.up{color:var(--green);}.dn{color:var(--red);}\n.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}\n@media(max-width:800px){.g2{grid-template-columns:1fr;}}\n.card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;}\n.ch{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}\n.ch h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}\n.ch .hint{font-size:10px;color:var(--muted);}\n.cb{padding:10px 0;}\n.cwrap{padding:14px;}\ncanvas{max-height:240px;}\n.clt{max-height:300px!important;}\ntable{width:100%;border-collapse:collapse;}\nth{font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:5px 12px;text-align:left;border-bottom:1px solid var(--border);}\ntd{padding:7px 12px;border-bottom:1px solid rgba(39,42,69,.4);font-size:12px;}\ntr:last-child td{border-bottom:none;}\ntr.cl{cursor:pointer;}tr.cl:hover td{background:var(--hover);}\n.bar-wrap{display:flex;align-items:center;gap:7px;}\n.bt{width:70px;height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;flex-shrink:0;}\n.bf{height:100%;border-radius:3px;}\n.pct{font-size:12px;font-weight:600;min-width:44px;}\n.tag{display:inline-flex;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600;margin:1px;}\n.tr{background:rgba(239,68,68,.15);color:var(--red);}\n.ty{background:rgba(245,158,11,.15);color:var(--yellow);}\n.tg{background:rgba(34,197,94,.15);color:var(--green);}\n.ax{background:rgba(129,140,248,.06);border:1px solid rgba(129,140,248,.2);border-radius:8px;padding:11px 13px;margin:0 12px 12px;}\n.ax h4{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;}\n.ai{display:flex;gap:7px;margin-bottom:5px;font-size:12px;line-height:1.5;}\n.an{background:var(--accent);color:#fff;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px;}\n.alert{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:12px;display:flex;gap:9px;}\n.srch{padding:8px 12px 0;}\ninput[type=text],select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-size:12px;outline:none;}\ninput[type=text]{width:100%;}\ninput:focus,select:focus{border-color:var(--accent);}\n.empty{color:var(--muted);font-size:12px;padding:20px;text-align:center;}\n.rnk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--border);font-size:9px;font-weight:700;flex-shrink:0;}\n.r1{background:rgba(239,68,68,.3);color:var(--red);}.r2{background:rgba(245,158,11,.2);color:var(--yellow);}.r3{background:rgba(129,140,248,.2);color:var(--accent);}\n.star{color:#f59e0b;font-size:11px;}\n.cmt-box{background:rgba(255,255,255,.03);border-left:3px solid var(--border);padding:7px 11px;margin:3px 12px;border-radius:0 5px 5px 0;font-size:12px;color:var(--text2);line-height:1.5;}\n.cmt-box.bad{border-color:var(--red);}\n.bchip{display:inline-flex;align-items:center;gap:3px;background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--accent);cursor:pointer;}\n.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}\n@media(max-width:700px){.two{grid-template-columns:1fr;}}\n.sort-th{cursor:pointer;user-select:none;}\n.sort-th:hover{color:var(--accent);}\n.cmt-row{padding:9px 16px;border-bottom:1px solid rgba(39,42,69,.4);display:grid;grid-template-columns:130px 130px 120px 1fr 48px;gap:8px;align-items:start;font-size:12px;}\n.cmt-row:hover{background:var(--hover);}\n.cmt-head{background:var(--bg);padding:6px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:130px 130px 120px 1fr 48px;gap:8px;font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;}\n.fl-bar{display:flex;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;}\n.fl-bar label{font-size:11px;color:var(--muted);}\nselect.sm{min-width:110px;}\n#cmt-count{font-size:11px;color:var(--muted);}\n/* Color scale legend */\n.scale-bar{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin-bottom:12px;flex-wrap:wrap;}\n.scale-item{display:flex;align-items:center;gap:6px;font-size:12px;}\n.scale-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}\n.scale-label{color:var(--text);font-weight:600;}\n.scale-range{color:var(--muted);font-size:11px;}\n.scale-divider{width:1px;height:20px;background:var(--border);margin:0 4px;}\n\n/* Sortable brand table */\n#brand-sort{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;}\n.sort-btn{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-size:10px;font-weight:600;cursor:pointer;}\n.sort-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}";
+
+async function exportHTML(){
+  const btn=document.getElementById('export-btn');
+  const d=CACHE.initial;
+  if(!d||!d.kitchens||!d.kitchens.length){alert('Espera a que el dashboard termine de cargar.');return;}
+  btn.textContent='⏳ Generando…';btn.disabled=true;
+  try{
+    const C=COUNTRY,D=DATES,M=MAESTRO[C]||{};
+    const k=d.kitchens,b=d.brands,sl=d.slots,ca=d.causes||{};
+    const to2=k.reduce((s,r)=>s+(+r.w2o),0),tc2=k.reduce((s,r)=>s+(+r.w2c),0);
+    const to1=k.reduce((s,r)=>s+(+r.w1o),0),tc1=k.reduce((s,r)=>s+(+r.w1c),0);
+    const i2=to2?1-tc2/to2:0,i1=to1?1-tc1/to1:0;
+    const rojo=k.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)<0.965).length;
+    const amari=k.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)>=0.965&&(1-+r.w2c/+r.w2o)<0.975).length;
+    const verde=k.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)>=0.975).length;
+    const cname={'MEX':'México','COL':'Colombia','PER':'Perú'}[C];
+    const flag={'MEX':'🇲🇽','COL':'🇨🇴','PER':'🇵🇪'}[C];
+    const gen=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const sem=v=>v>=0.975?'🟢':v>=0.965?'🟡':'🔴';
+    const sc=v=>v>=0.975?'var(--green)':v>=0.965?'var(--yellow)':'var(--red)';
+    const pp=v=>(v*100).toFixed(2)+'%';
+    const dl=(w2,w1)=>{if(!w1)return'';const d=Math.round((w2-w1)*10000);return d>=0?'▲+'+d+' bps':'▼'+d+' bps';};
+    function bar(r){const c=sc(r),w=Math.max(0,Math.min(100,(r-0.9)/0.1*100));return '<div style="display:flex;align-items:center;gap:6px;"><div style="width:65px;height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;"><div style="height:100%;border-radius:3px;width:'+w+'%;background:'+c+';"></div></div><span style="font-size:12px;font-weight:600;color:'+c+'">'+pp(r)+'</span></div>';}
+    // City aggregation
+    const cityMap={};k.forEach(r=>{const c=r.city||'—';if(!cityMap[c])cityMap[c]={w2o:0,w2c:0,w1o:0,w1c:0};cityMap[c].w2o+=+r.w2o;cityMap[c].w2c+=+r.w2c;cityMap[c].w1o+=+r.w1o;cityMap[c].w1c+=+r.w1c;});
+    const cities=Object.entries(cityMap).map(([c,v])=>([c,v.w2o?1-v.w2c/v.w2o:0,v.w1o?1-v.w1c/v.w1o:0,v.w2o,v.w2c])).sort((a,b)=>a[1]-b[1]);
+    // Ops aggregation
+    const opsMap={};k.forEach(r=>{const m=M[r.kitchen_id],ops=m?m.ops:'Sin asignar';if(!opsMap[ops])opsMap[ops]={w2o:0,w2c:0,w1o:0,w1c:0,rojo:0,total:0};const o=opsMap[ops];o.w2o+=+r.w2o;o.w2c+=+r.w2c;o.w1o+=+r.w1o;o.w1c+=+r.w1c;o.total++;if(+r.w2o>=30&&(1-+r.w2c/+r.w2o)<0.965)o.rojo++;});
+    const opsList=Object.entries(opsMap).map(([n,v])=>([n,v.w2o?1-v.w2c/v.w2o:0,v.w1o?1-v.w1c/v.w1o:0,v.rojo,v.total])).sort((a,b)=>a[1]-b[1]);
+    // Red kitchens
+    const reds=k.filter(r=>+r.w2o>=30&&(1-+r.w2c/+r.w2o)<0.965).sort((a,b)=>(+a.w2c/+a.w2o)-(+b.w2c/+b.w2o));
+    const ss=[...sl].sort((a,b)=>+a.time_slot.split('.')[0]-+b.time_slot.split('.')[0]);
+
+    const parts=[];
+    const p=s=>parts.push(s);
+    const T='table-layout:auto;width:100%;border-collapse:collapse;';
+    const TH='padding:5px 11px;text-align:left;font-size:10px;text-transform:uppercase;color:#7b80a8;font-weight:700;border-bottom:1px solid #272a45;';
+    const TD='padding:7px 11px;border-bottom:1px solid rgba(39,42,69,.4);font-size:12px;';
+    p('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">');
+    p('<title>IF '+flag+' '+cname+' | '+D.w2Label+'</title>');
+    p('<style>'+_CSS+'</style></head><body>');
+    p('<header><div style="display:flex;align-items:center;gap:12px;">');
+    p('<span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-1px;">fdgy.</span>');
+    p('<div style="width:1px;height:22px;background:var(--border);"></div>');
+    p('<div><h1 style="font-size:14px;font-weight:700;color:#fff;">In Full Dashboard — '+flag+' '+cname+'</h1>');
+    p('<div class="meta">W2: '+D.w2Label+' | W1: '+D.w1Label+' | Generado: '+gen+'</div></div></div></header>');
+    p('<div style="padding:16px 20px;">');
+    // Scale bar
+    p('<div class="scale-bar"><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Escala IF:</span>');
+    p('<div style="display:flex;align-items:center;gap:6px;font-size:12px;"><div style="width:10px;height:10px;border-radius:50%;background:var(--red)"></div><span style="color:var(--red);font-weight:600">Rojo</span><span style="color:var(--muted);font-size:11px">IF &lt; 96.5%</span></div>');
+    p('<span style="color:var(--border)">|</span><div style="display:flex;align-items:center;gap:6px;font-size:12px;"><div style="width:10px;height:10px;border-radius:50%;background:var(--yellow)"></div><span style="color:var(--yellow);font-weight:600">Amarillo</span><span style="color:var(--muted);font-size:11px">96.5–97.5%</span></div>');
+    p('<span style="color:var(--border)">|</span><div style="display:flex;align-items:center;gap:6px;font-size:12px;"><div style="width:10px;height:10px;border-radius:50%;background:var(--green)"></div><span style="color:var(--green);font-weight:600">Verde</span><span style="color:var(--muted);font-size:11px">≥ 97.5%</span></div>');
+    p('<span style="color:var(--border)">|</span><span style="font-size:11px;color:var(--muted)">Target: <strong style="color:var(--green)">97.5%</strong></span></div>');
+    // Alert
+    if(rojo>0)p('<div class="alert"><span style="font-size:15px">🚨</span><div><strong>'+rojo+' cocinas en rojo</strong> — acción inmediata requerida.</div></div>');
+    // KPIs
+    p('<div class="kpi-row">');
+    p('<div class="kpi"><div class="lbl">IF Global W2</div><div class="val" style="color:'+sc(i2)+'">'+pp(i2)+'</div><div class="dlt">'+dl(i2,i1)+' W1: '+pp(i1)+'</div></div>');
+    p('<div class="kpi"><div class="lbl">Pedidos W2</div><div class="val">'+to2.toLocaleString()+'</div><div class="sub">W1: '+to1.toLocaleString()+'</div></div>');
+    p('<div class="kpi"><div class="lbl">Quejas W2</div><div class="val" style="color:var(--red)">'+tc2+'</div><div class="sub">'+((tc2/to2)*100).toFixed(2)+'%</div></div>');
+    p('<div class="kpi"><div class="lbl">🔴 Rojo</div><div class="val" style="color:var(--red)">'+rojo+'</div></div>');
+    p('<div class="kpi"><div class="lbl">🟡 Amarillo</div><div class="val" style="color:var(--yellow)">'+amari+'</div></div>');
+    p('<div class="kpi"><div class="lbl">🟢 Verde</div><div class="val" style="color:var(--green)">'+verde+'/'+k.length+'</div></div></div>');
+    // Two-col tables
+    p('<div class="g2">');
+    // City table
+    p('<div class="card"><div class="ch"><h3>IF por Ciudad</h3></div><div class="cb"><table style="'+T+'">');
+    p('<tr><th style="'+TH+'">Ciudad</th><th style="'+TH+'">IF W2</th><th style="'+TH+'">vs W1</th><th style="'+TH+'">Quejas</th></tr>');
+    cities.forEach(([c,i2v,i1v,orders,comp])=>{p('<tr><td style="'+TD+'">'+sem(i2v)+' '+c+'</td><td style="'+TD+'">'+bar(i2v)+'</td><td style="'+TD+';font-size:11px">'+dl(i2v,i1v)+'<br><span style="color:var(--muted)">'+pp(i1v)+'</span></td><td style="'+TD+';color:var(--red)">'+comp+'</td></tr>');});
+    p('</table></div></div>');
+    // Ops table
+    p('<div class="card"><div class="ch"><h3>IF por Ops Manager</h3></div><div class="cb"><table style="'+T+'">');
+    p('<tr><th style="'+TH+'">Ops Manager</th><th style="'+TH+'">IF W2</th><th style="'+TH+'">vs W1</th><th style="'+TH+'">🔴</th></tr>');
+    opsList.forEach(([n,i2v,i1v,rj,tot])=>{p('<tr><td style="'+TD+'">'+sem(i2v)+' <strong>'+n+'</strong></td><td style="'+TD+'">'+bar(i2v)+'</td><td style="'+TD+';font-size:11px">'+dl(i2v,i1v)+'<br><span style="color:var(--muted)">'+pp(i1v)+'</span></td><td style="'+TD+'">'+(rj>0?'<span style="color:var(--red);font-weight:700">'+rj+'/'+tot+'</span>':'<span style="color:var(--green)">0/'+tot+'</span>')+'</td></tr>');});
+    p('</table></div></div></div>');
+    // Red kitchens
+    if(reds.length>0){
+      p('<div class="card"><div class="ch"><h3>🔴 Cocinas en Rojo</h3></div><div class="cb"><table style="'+T+'">');
+      p('<tr><th style="'+TH+'">Cocina</th><th style="'+TH+'">Ops Manager</th><th style="'+TH+'">Ciudad</th><th style="'+TH+'">IF W2</th><th style="'+TH+'">vs W1</th></tr>');
+      reds.forEach(r=>{const ifv=+r.w2o?1-+r.w2c/+r.w2o:0,w1if=+r.w1o?1-+r.w1c/+r.w1o:0,m=M[r.kitchen_id]||{};p('<tr><td style="'+TD+'"><strong>'+r.kitchen+'</strong></td><td style="'+TD+';color:var(--muted)">'+(m.ops||'—')+'</td><td style="'+TD+';color:var(--muted)">'+r.city+'</td><td style="'+TD+'">'+bar(ifv)+'</td><td style="'+TD+';font-size:11px">'+dl(ifv,w1if)+'</td></tr>');});
+      p('</table></div></div>');
+    }
+    // Brands and slots
+    p('<div class="g2">');
+    p('<div class="card"><div class="ch"><h3>🏷️ Top Marcas por % Queja</h3></div><div class="cb"><table style="'+T+'">');
+    p('<tr><th style="'+TH+'">Marca</th><th style="'+TH+'">IF W2</th><th style="'+TH+'">% Queja</th><th style="'+TH+'">Pedidos</th></tr>');
+    [...b].sort((a,x)=>+x.pct-+a.pct).slice(0,12).forEach(br=>{const ifv=+br.if_rate;p('<tr><td style="'+TD+'">'+sem(ifv)+' <strong>'+br.brand+'</strong></td><td style="'+TD+'">'+bar(ifv)+'</td><td style="'+TD+';color:'+(+br.pct>5?'var(--red)':+br.pct>3?'var(--yellow)':'var(--green)')+';font-weight:700">'+(+br.pct).toFixed(2)+'%</td><td style="'+TD+';color:var(--muted)">'+(+br.orders).toLocaleString()+'</td></tr>');});
+    p('</table></div></div>');
+    p('<div class="card"><div class="ch"><h3>⏰ IF por Franja Horaria</h3></div><div class="cb"><table style="'+T+'">');
+    p('<tr><th style="'+TH+'">Franja</th><th style="'+TH+'">IF W2</th><th style="'+TH+'">Pedidos</th><th style="'+TH+'">Quejas</th></tr>');
+    ss.forEach(s=>{const ifv=+s.if_rate;p('<tr><td style="'+TD+'">'+sem(ifv)+' '+s.time_slot.split('.')[1]+'</td><td style="'+TD+'">'+bar(ifv)+'</td><td style="'+TD+';color:var(--muted)">'+(+s.orders).toLocaleString()+'</td><td style="'+TD+';color:var(--red)">'+s.comp+'</td></tr>');});
+    p('</table></div></div></div>');
+    p('</div>');
+    p('<footer style="background:var(--card);border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">');
+    p('<span style="font-size:20px;font-weight:900;color:var(--muted);letter-spacing:-1px;">foodology</span>');
+    p('<span style="font-size:11px;color:var(--muted);">IF Dashboard · '+flag+' '+cname+' · W2: '+D.w2Label+' · '+gen+'</span>');
+    p('</footer></body></html>');
+
+    const blob=new Blob([parts.join('')],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='IF_'+C+'_'+D.w2.start+'_'+D.w2.end+'.html';a.click();
+    URL.revokeObjectURL(url);
+    btn.textContent='✅ Descargado';
+    setTimeout(()=>{btn.textContent='⬇ Exportar HTML';btn.disabled=false;},2500);
+  }catch(e){
+    alert('Error: '+e);btn.textContent='⬇ Exportar HTML';btn.disabled=false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+// Pre-populate cache with Python-generated data
+DATES = DATES || {};
+DATES.w2Label = DATES.w2_label || DATES.w2Label || '';
+DATES.w1Label = DATES.w1_label || DATES.w1Label || '';
+CACHE.initial = {
+  kitchens: (W2||[]).map(r=>({...r,w2o:+(r.w2o||0),w2c:+(r.w2c||0),w1o:+(r.w1o||0),w1c:+(r.w1c||0)})),
+  brands: AB||[],
+  slots: SL||[],
+  causes: CAU||{}
+};
+Object.keys(CAL||{}).forEach(kid=>{
+  const cal=CAL[kid]||{days:[],slots:[]};
+  CACHE.kitchen[kid]={brands:(BK||{})[kid]||[],days:cal.days,slots:cal.slots};
+});
+document.getElementById('header-meta').textContent='__META__';
+renderLevel();
+</script>
+<!-- Footer -->
+<div style="background:var(--card);border-top:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-top:24px;flex-wrap:wrap;gap:8px;">
+  <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgNjQiPgogIDx0ZXh0IHg9IjE4MCIgeT0iNDYiIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICBmb250LWZhbWlseT0iTnVuaXRvLEZ1dHVyYSxUcmVidWNoZXQgTVMsc3lzdGVtLXVpLHNhbnMtc2VyaWYiCiAgICBmb250LXdlaWdodD0iOTAwIiBmb250LXNpemU9IjQ4IiBmaWxsPSJ3aGl0ZSIgbGV0dGVyLXNwYWNpbmc9Ii0xLjUiPmZvb2RvbG9neTwvdGV4dD4KPC9zdmc+" alt="foodology" style="height:28px;opacity:0.7;">
+  <span style="font-size:11px;color:var(--muted);">In Full Dashboard · Actualización automática cada miércoles</span>
+</div>
+
+</body>
+</html>
