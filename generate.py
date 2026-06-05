@@ -12,9 +12,9 @@ from datetime import datetime, date, timedelta
 from pathlib import Path
 
 # ── Paths ─────────────────────────────────────────────────────
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).parent
 DOCS = ROOT / "docs"
-TEMPLATE = ROOT / "scripts" / "template.html"
+TEMPLATE = ROOT / "template.html"
 DOCS.mkdir(exist_ok=True)
 
 # ── Maestro de cocinas ────────────────────────────────────────
