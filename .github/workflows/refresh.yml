@@ -1,0 +1,32 @@
+name: Refresh IF Dashboard
+
+on:
+  schedule:
+    - cron: '0 17 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Generate dashboards
+        run: python generate.py
+        env:
+          REDSHIFT_URL: ${{ secrets.REDSHIFT_URL }}
+      - name: Commit and push
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/
+          git diff --staged --quiet && echo "No changes" || (git commit -m "Dashboard update $(date)" && git push)
