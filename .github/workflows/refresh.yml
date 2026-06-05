@@ -23,7 +23,7 @@ jobs:
       - name: Generate dashboards
         run: python generate.py
         env:
-          REDSHIFT_URL: ${{ secrets.REDSHIFT_URL }}
+          MCP_URL: https://foodology-redshift-mcp-gx27.onrender.com/mcp
       - name: Commit and push
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
