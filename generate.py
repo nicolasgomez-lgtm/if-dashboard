@@ -1,8 +1,12 @@
 """
 IF Dashboard Generator — Foodology
+
 Calls Redshift via the MCP HTTP server (same connection used by the Cowork artifact).
+
 Outputs: docs/mex.html, docs/col.html, docs/per.html, docs/index.html
+
 """
+
 import json
 import os
 import sys
@@ -12,8 +16,8 @@ from pathlib import Path
 from collections import defaultdict
 
 # ── Paths ─────────────────────────────────────────────────────
-ROOT     = Path(__file__).parent
-DOCS     = ROOT / "docs"
+ROOT = Path(__file__).parent
+DOCS = ROOT / "docs"
 TEMPLATE = ROOT / "template.html"
 DOCS.mkdir(exist_ok=True)
 
@@ -24,51 +28,92 @@ MCP_URL = os.environ.get(
 )
 
 # ── Maestro de cocinas ────────────────────────────────────────
+# Fuente de verdad: maestro_de_cocinas.csv (actualizado 2026-06-25)
+# kitchen_id = ID usado en Redshift (fdgy_views.ontime_infull_order)
+
 MAESTRO = {
     "MEX": {
-        "01 DOCTORES":{"ops":"Sergio Torres","city":"CDMX"},"02 SAN ANGEL":{"ops":"Guillermo Villalva","city":"CDMX"},
-        "03 POLANCO":{"ops":"Guillermo Villalva","city":"CDMX"},"04 SANTA FE":{"ops":"Sergio Torres","city":"CDMX"},
-        "05 COAPA":{"ops":"Sergio Torres","city":"CDMX"},"06 SATELITE":{"ops":"Sergio Torres","city":"CDMX"},
-        "09 CHURUBUSCO":{"ops":"Sergio Torres","city":"CDMX"},"10 SAN JERONIMO":{"ops":"Carlos Garcia","city":"Monterrey"},
-        "11 AZCAPOTZALCO":{"ops":"Guillermo Villalva","city":"CDMX"},"12 DEL VALLE":{"ops":"Guillermo Villalva","city":"CDMX"},
-        "13 TEC":{"ops":"Carlos Garcia","city":"Monterrey"},"14 JARDINES":{"ops":"Selene Cabrera","city":"Guadalajara"},
-        "15 LINDAVISTA":{"ops":"Guillermo Villalva","city":"CDMX"},"16 PEDREGAL":{"ops":"Guillermo Villalva","city":"CDMX"},
-        "17 CUMBRES":{"ops":"Carlos Garcia","city":"Monterrey"},"19 LA CALMA":{"ops":"Selene Cabrera","city":"Guadalajara"},
-        "20 ESMERALDA":{"ops":"Sergio Torres","city":"CDMX"},"21 SANTA TERESITA":{"ops":"Selene Cabrera","city":"Guadalajara"},
-        "22 SAN NICOLAS":{"ops":"Carlos Garcia","city":"Monterrey"},"23 SANTA CATARINA":{"ops":"Carlos Garcia","city":"Monterrey"},
-        "24 METEPEC":{"ops":"Guillermo Villalva","city":"CDMX"},"25 TABACHINES":{"ops":"Selene Cabrera","city":"Guadalajara"},
-        "26 CIUDAD JUDICIAL":{"ops":"Sergio Torres","city":"Puebla"},"27 IZTAPALAPA":{"ops":"Sergio Torres","city":"CDMX"},
-        "28 CARRETERA NACIONA":{"ops":"Carlos Garcia","city":"Monterrey"},"30 LINCOLN":{"ops":"Carlos Garcia","city":"Monterrey"},
-        "31 MONTEJO":{"ops":"Claudia Valdez","city":"Mérida"},"34 TLAQUEPAQUE":{"ops":"Selene Cabrera","city":"Guadalajara"},
-        "37 CANEK":{"ops":"Claudia Valdez","city":"Mérida"},"38 SALTILLO CENTRO":{"ops":"Carlos Garcia","city":"Monterrey"},
-        "39 MONTERREY CENTRO":{"ops":"Carlos Garcia","city":"Monterrey"},"40 JARDINES DEL VALL":{"ops":"Selene Cabrera","city":"Guadalajara"},
-        "41 VOLCANES":{"ops":"Sergio Torres","city":"Puebla"},"45 ESTADIO":{"ops":"Selene Cabrera","city":"Guadalajara"},
-        "51 SAMARA":{"ops":"Paulina Lima","city":"CDMX"},"52 MANACAR":{"ops":"Paulina Lima","city":"CDMX"},
+        "01 DOCTORES":          {"ops": "Sergio Torres",     "city": "CDMX"},
+        "02 SAN ANGEL":         {"ops": "Guillermo Villalva","city": "CDMX"},
+        "03 POLANCO":           {"ops": "Guillermo Villalva","city": "CDMX"},
+        "04 SANTA FE":          {"ops": "Sergio Torres",     "city": "CDMX"},
+        "05 COAPA":             {"ops": "Sergio Torres",     "city": "CDMX"},
+        "06 SATELITE":          {"ops": "Sergio Torres",     "city": "CDMX"},
+        "09 CHURUBUSCO":        {"ops": "Sergio Torres",     "city": "CDMX"},
+        "10 SAN JERONIMO":      {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "11 AZCAPOTZALCO":      {"ops": "Guillermo Villalva","city": "CDMX"},
+        "12 DEL VALLE":         {"ops": "Guillermo Villalva","city": "CDMX"},
+        "13 TEC":               {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "14 JARDINES":          {"ops": "Selene Cabrera",    "city": "Guadalajara"},
+        "15 LINDAVISTA":        {"ops": "Guillermo Villalva","city": "CDMX"},
+        "16 PEDREGAL":          {"ops": "Guillermo Villalva","city": "CDMX"},
+        "17 CUMBRES":           {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "19 LA CALMA":          {"ops": "Selene Cabrera",    "city": "Guadalajara"},
+        "20 ESMERALDA":         {"ops": "Sergio Torres",     "city": "CDMX"},
+        "21 SANTA TERESITA":    {"ops": "Selene Cabrera",    "city": "Guadalajara"},
+        "22 SAN NICOLAS":       {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "23 SANTA CATARINA":    {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "24 METEPEC":           {"ops": "Guillermo Villalva","city": "Guadalajara"},
+        "25 TABACHINES":        {"ops": "Selene Cabrera",    "city": "Guadalajara"},
+        "26 CIUDAD JUDICIAL":   {"ops": "Sergio Torres",     "city": "Puebla"},
+        "27 IZTAPALAPA":        {"ops": "Sergio Torres",     "city": "CDMX"},
+        "28 CARRETERA NACIONA": {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "30 LINCOLN":           {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "31 MONTEJO":           {"ops": "Claudia Valdez",    "city": "Mérida"},
+        "34 TLAQUEPAQUE":       {"ops": "Selene Cabrera",    "city": "Guadalajara"},
+        "37 CANEK":             {"ops": "Claudia Valdez",    "city": "Mérida"},
+        "38 SALTILLO CENTRO":   {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "39 MONTERREY CENTRO":  {"ops": "Carlos Garcia",     "city": "Monterrey"},
+        "40 JARDINES DEL VALL": {"ops": "Selene Cabrera",    "city": "Guadalajara"},
+        "41 VOLCANES":          {"ops": "Sergio Torres",     "city": "Puebla"},
+        "43 CP MONTERREY":      {"ops": "Diego Cruz",        "city": "Monterrey"},
+        "44 CP GUADALAJARA":    {"ops": "Diego Cruz",        "city": "Guadalajara"},
+        "45 ESTADIO":           {"ops": "Selene Cabrera",    "city": "Guadalajara"},
+        "51 SAMARA":            {"ops": "Paulina Lima",      "city": "CDMX"},
+        "52 MANACAR":           {"ops": "Paulina Lima",      "city": "CDMX"},
+        "54 CENTR INTERLOMAS":  {"ops": "Paulina Lima",      "city": "CDMX"},
     },
     "COL": {
-        "01 USAQUEN":{"ops":"Laura Hernández","city":"Bogotá"},"02 PARQUE 93":{"ops":"Laura Hernández","city":"Bogotá"},
-        "03 CHAPINERO":{"ops":"Laura Hernández","city":"Bogotá"},"06 COLINA":{"ops":"Laura Hernández","city":"Bogotá"},
-        "08 ANDES":{"ops":"Deivis Gómez","city":"Bogotá"},"11 MANILA":{"ops":"Jose Rodriguez","city":"Medellín"},
-        "12 LAURELES":{"ops":"Jose Rodriguez","city":"Medellín"},"13 CHIA":{"ops":"Deivis Gómez","city":"Bogotá"},
-        "14 ENVIGADO":{"ops":"Ulises Torres","city":"Medellín"},"15 ENGATIVA":{"ops":"Laura Hernández","city":"Bogotá"},
-        "18 BELLO":{"ops":"Ulises Torres","city":"Medellín"},"22 SANTA MONICA":{"ops":"Juan Pablo Gómez","city":"Cali"},
-        "24 SAN FERNANDO":{"ops":"Juan Pablo Gómez","city":"Cali"},"28 PEREIRA":{"ops":"Juan Pablo Gómez","city":"Pereira"},
-        "29 ITAGUI":{"ops":"Ulises Torres","city":"Medellín"},"32 BARRANQUILLA":{"ops":"Juan Pablo Gómez","city":"Barranquilla"},
-        "33 CARTAGENA":{"ops":"Juan Pablo Gómez","city":"Cartagena"},"36 VILLA DEL PRADO":{"ops":"Deivis Gómez","city":"Bogotá"},
-        "38 KENNEDY":{"ops":"Deivis Gómez","city":"Bogotá"},"39 SALVIO":{"ops":"Kevin Ramirez","city":"Bogotá"},
-        "42 CABECERA":{"ops":"Juan Pablo Gómez","city":"Bucaramanga"},"45 VERAGUAS":{"ops":"Deivis Gómez","city":"Bogotá"},
-        "46 INGENIO":{"ops":"Juan Pablo Gómez","city":"Cali"},"50 CHICO":{"ops":"Diana Flórez","city":"Bogotá"},
-        "55 TITAN":{"ops":"Kevin Ramirez","city":"Bogotá"},"56 SANTAFE BOG":{"ops":"Kevin Ramirez","city":"Bogotá"},
-        "57 SANTAFE MED":{"ops":"Ulises Torres","city":"Medellín"},"58 VIVA MED":{"ops":"Ulises Torres","city":"Medellín"},
-        "61 CHICO CINNABON":{"ops":"Diana Flórez","city":"Bogotá"},"62 FONTANAR":{"ops":"Kevin Ramirez","city":"Bogotá"},
-        "65 CALLE 109":{"ops":"Andres Pulgarin","city":"Bogotá"},"66 PLAZA CLARO CINNA":{"ops":"Kevin Ramirez","city":"Bogotá"},
-        "67 PLAZA CLARO COURT":{"ops":"Andres Pulgarin","city":"Bogotá"},"69 ARRECIFE":{"ops":"Juan Antonio Angel","city":"Bogotá"},
+        "01 USAQUEN":           {"ops": "Laura Hernández",      "city": "Bogotá"},
+        "02 PARQUE 93":         {"ops": "Laura Hernández",      "city": "Bogotá"},
+        "03 CHAPINERO":         {"ops": "Laura Hernández",      "city": "Bogotá"},
+        "06 COLINA":            {"ops": "Leidy Pinzon",         "city": "Bogotá"},
+        "08 ANDES":             {"ops": "Juan Sebastian Bernal","city": "Bogotá"},
+        "11 MANILA":            {"ops": "Jose Rodriguez",       "city": "Medellín"},
+        "12 LAURELES":          {"ops": "Jose Rodriguez",       "city": "Medellín"},
+        "13 CHIA":              {"ops": "Laura Hernández",      "city": "Bogotá"},
+        "14 ENVIGADO":          {"ops": "Ulises Torres",        "city": "Medellín"},
+        "15 ENGATIVA":          {"ops": "Laura Hernández",      "city": "Bogotá"},
+        "18 BELLO":             {"ops": "Ulises Torres",        "city": "Medellín"},
+        "22 SANTA MONICA":      {"ops": "Juan Pablo Gómez",     "city": "Cali"},
+        "24 SAN FERNANDO":      {"ops": "Juan Pablo Gómez",     "city": "Cali"},
+        "28 PEREIRA":           {"ops": "Juan Pablo Gómez",     "city": "Pereira"},
+        "29 ITAGUI":            {"ops": "Ulises Torres",        "city": "Medellín"},
+        "32 BARRANQUILLA":      {"ops": "Juan Pablo Gómez",     "city": "Barranquilla"},
+        "33 CARTAGENA":         {"ops": "Juan Pablo Gómez",     "city": "Cartagena"},
+        "36 VILLA DEL PRADO":   {"ops": "Leidy Pinzon",         "city": "Bogotá"},
+        "38 KENNEDY":           {"ops": "Leidy Pinzon",         "city": "Bogotá"},
+        "39 SALVIO":            {"ops": "Kevin Ramirez",        "city": "Bogotá"},
+        "42 CABECERA":          {"ops": "Juan Pablo Gómez",     "city": "Bucaramanga"},
+        "45 VERAGUAS":          {"ops": "Leidy Pinzon",         "city": "Bogotá"},
+        "46 INGENIO":           {"ops": "Juan Pablo Gómez",     "city": "Cali"},
+        "50 CHICO":             {"ops": "Diana Flórez",         "city": "Bogotá"},
+        "55 TITAN":             {"ops": "Kevin Ramirez",        "city": "Bogotá"},
+        "56 SANTAFE BOG":       {"ops": "Kevin Ramirez",        "city": "Bogotá"},
+        "57 SANTAFE MED":       {"ops": "Karen Urquijo",        "city": "Medellín"},
+        "58 VIVA MED":          {"ops": "Karen Urquijo",        "city": "Medellín"},
+        "61 CHICO CINNABON":    {"ops": "Kevin Ramirez",        "city": "Bogotá"},
+        "65 CALLE 109":         {"ops": "Andres Pulgarin",      "city": "Bogotá"},
+        "66 PLAZA CLARO CINNA": {"ops": "Kevin Ramirez",        "city": "Bogotá"},
+        "67 PLAZA CLARO COURT": {"ops": "Daniel Beltran",       "city": "Bogotá"},
+        "69 ARRECIFE":          {"ops": "Juan Sebastian Bernal","city": "Bogotá"},
     },
     "PER": {
-        "01 SAN ISIDRO":{"ops":"Juan Camilo Vanegas","city":"Lima"},
-        "03 LA MOLINA":{"ops":"Juan Camilo Vanegas","city":"Lima"},
-        "04 LA ALBORADA":{"ops":"Juan Camilo Vanegas","city":"Lima"},
-        "06 SURQUILLO":{"ops":"Juan Camilo Vanegas","city":"Lima"},
+        "01 SAN ISIDRO":        {"ops": "Anny de la Cruz", "city": "Lima"},
+        "03 LA MOLINA":         {"ops": "Anny de la Cruz", "city": "Lima"},
+        "04 LA ALBORADA":       {"ops": "Anny de la Cruz", "city": "Lima"},
+        "06 SURQUILLO":         {"ops": "Anny de la Cruz", "city": "Lima"},
+        "01 CP LIMA":           {"ops": "Alicia Caceres",  "city": "Lima"},
     }
 }
 
@@ -100,16 +145,12 @@ def _post(payload, timeout=120):
     }
     if _session_id:
         headers["Mcp-Session-Id"] = _session_id
-
     resp = requests.post(MCP_URL, json=payload, headers=headers, timeout=timeout)
     resp.raise_for_status()
-
     if "mcp-session-id" in resp.headers:
         _session_id = resp.headers["mcp-session-id"]
-
     ct = resp.headers.get("content-type", "")
     if "text/event-stream" in ct:
-        # Parse SSE stream — pick first message that has result/error
         for line in resp.text.splitlines():
             if line.startswith("data:"):
                 chunk = line[5:].strip()
@@ -123,9 +164,8 @@ def _post(payload, timeout=120):
         return {}
     return resp.json()
 
-
 def _init_mcp():
-    """MCP initialize handshake. Some servers require it."""
+    """MCP initialize handshake."""
     global _session_id
     try:
         _post({
@@ -143,7 +183,6 @@ def _init_mcp():
     except Exception as e:
         print(f"  MCP init note: {e}")
 
-
 def run(sql):
     """Execute SQL via MCP execute_query tool. Returns list of dicts."""
     global _session_id
@@ -151,8 +190,6 @@ def run(sql):
         "jsonrpc": "2.0", "method": "tools/call", "id": 1,
         "params": {"name": "execute_query", "arguments": {"sql": sql}},
     })
-
-    # If server says not initialized, do the handshake and retry once
     if "error" in rpc:
         err = rpc["error"]
         code = err.get("code") if isinstance(err, dict) else None
@@ -162,24 +199,21 @@ def run(sql):
                 "jsonrpc": "2.0", "method": "tools/call", "id": 1,
                 "params": {"name": "execute_query", "arguments": {"sql": sql}},
             })
-        if "error" in rpc:
-            raise RuntimeError(f"MCP error: {rpc['error']}")
-
+    if "error" in rpc:
+        raise RuntimeError(f"MCP error: {rpc['error']}")
     content = rpc.get("result", {}).get("content", [])
     if not content:
         raise RuntimeError(f"Empty MCP result for query: {sql[:80]}")
-
     text = content[0].get("text", "")
     if not text.strip().startswith(("{", "[")):
         raise RuntimeError(f"Redshift error: {text[:300]}")
-
     data = json.loads(text)
     if isinstance(data, dict) and "columns" in data:
         cols = data["columns"]
         rows = data.get("rows", [])
         if rows and isinstance(rows[0], list):
             return [dict(zip(cols, row)) for row in rows]
-        return rows  # already dicts
+        return rows
     return data if isinstance(data, list) else []
 
 # ── SQL helpers ───────────────────────────────────────────────
@@ -286,26 +320,24 @@ def build_cal(rows):
         if dw not in tmp[kid]["days"]:
             tmp[kid]["days"][dw] = {"day": r["day_name"], "orders": 0, "comp": 0}
         tmp[kid]["days"][dw]["orders"] += int(r["orders"])
-        tmp[kid]["days"][dw]["comp"]   += int(r["comp"])
+        tmp[kid]["days"][dw]["comp"] += int(r["comp"])
         s = r["time_slot"].split(".")[-1] if "." in str(r["time_slot"]) else str(r["time_slot"])
         if s not in tmp[kid]["slots"]:
             tmp[kid]["slots"][s] = {"orders": 0, "comp": 0}
         tmp[kid]["slots"][s]["orders"] += int(r["orders"])
-        tmp[kid]["slots"][s]["comp"]   += int(r["comp"])
-
-    dow_order  = [1,2,3,4,5,6,0]
+        tmp[kid]["slots"][s]["comp"] += int(r["comp"])
+    dow_order = [1,2,3,4,5,6,0]
     slot_order = ["Early Morning","Morning","Lunch","Afternoon","Early Evening","Late Evening"]
     result = {}
     for kid, v in tmp.items():
-        days  = [{"day":v["days"][d]["day"],"orders":v["days"][d]["orders"],"comp":v["days"][d]["comp"],
-                  "if":round(1-v["days"][d]["comp"]/v["days"][d]["orders"],4) if v["days"][d]["orders"] else 1.0}
-                 for d in dow_order if d in v["days"]]
+        days = [{"day":v["days"][d]["day"],"orders":v["days"][d]["orders"],"comp":v["days"][d]["comp"],
+                 "if":round(1-v["days"][d]["comp"]/v["days"][d]["orders"],4) if v["days"][d]["orders"] else 1.0}
+                for d in dow_order if d in v["days"]]
         slots = [{"slot":s,"orders":v["slots"][s]["orders"],"comp":v["slots"][s]["comp"],
                   "if":round(1-v["slots"][s]["comp"]/v["slots"][s]["orders"],4) if v["slots"][s]["orders"] else 1.0}
                  for s in slot_order if s in v["slots"]]
         result[kid] = {"days": days, "slots": slots}
     return result
-
 
 def build_bk(rows):
     r = defaultdict(list)
@@ -315,23 +347,25 @@ def build_bk(rows):
 
 # ── Main generator ────────────────────────────────────────────
 def generate(country, d):
-    M     = MAESTRO.get(country, {})
-    flag  = {"MEX":"🇲🇽","COL":"🇨🇴","PER":"🇵🇪"}[country]
+    M = MAESTRO.get(country, {})
+    flag = {"MEX":"🇲🇽","COL":"🇨🇴","PER":"🇵🇪"}[country]
     cname = {"MEX":"México","COL":"Colombia","PER":"Perú"}[country]
-    print(f"  [{country}] Running queries via MCP...")
 
-    kitchens = run(sql_kitchens(country, d))
-    brands   = run(sql_brands(country, d))
-    slots    = run(sql_slots(country, d))
-    causes_r = run(sql_causes(country, d))
-    cal_rows = run(sql_cal(country, d))
-    bk_rows  = run(sql_bk(country, d))
+    print(f"  [{country}] Running queries via MCP...")
+    kitchens  = run(sql_kitchens(country, d))
+    brands    = run(sql_brands(country, d))
+    slots     = run(sql_slots(country, d))
+    causes_r  = run(sql_causes(country, d))
+    cal_rows  = run(sql_cal(country, d))
+    bk_rows   = run(sql_bk(country, d))
 
     causes   = causes_r[0] if causes_r else {}
     cal_data = build_cal(cal_rows)
     bk_data  = build_bk(bk_rows)
-    w1_map   = {k["kitchen_id"]: round(1 - int(k["w1c"]) / int(k["w1o"]), 4)
-                for k in kitchens if int(k.get("w1o") or 0) > 0}
+
+    w1_map = {k["kitchen_id"]: round(1 - int(k["w1c"]) / int(k["w1o"]), 4)
+              for k in kitchens if int(k.get("w1o") or 0) > 0}
+
     generated = datetime.now().strftime("%-d %b %Y %H:%M")
 
     data_js = (
@@ -350,15 +384,14 @@ def generate(country, d):
 
     template = TEMPLATE.read_text(encoding="utf-8")
     html = template.replace("/*__DATA__*/", data_js)
-    html = html.replace("__META__",         f"W2: {d['w2_label']} | W1: {d['w1_label']} | {generated}")
-    html = html.replace("__COUNTRY__",      f"{flag} {cname}")
+    html = html.replace("__META__", f"W2: {d['w2_label']} | W1: {d['w1_label']} | {generated}")
+    html = html.replace("__COUNTRY__", f"{flag} {cname}")
     html = html.replace("__COUNTRY_CODE__", country.lower())
 
     out = DOCS / f"{country.lower()}.html"
     out.write_text(html, encoding="utf-8")
     print(f"  [{country}] ✓ docs/{country.lower()}.html ({len(html)//1024} KB)")
     return True
-
 
 def make_index():
     html = """<!DOCTYPE html>
@@ -371,7 +404,6 @@ def make_index():
     (DOCS / "index.html").write_text(html, encoding="utf-8")
     print("  index.html created")
 
-
 if __name__ == "__main__":
     if not TEMPLATE.exists():
         print(f"ERROR: template.html not found at {TEMPLATE}")
@@ -382,7 +414,6 @@ if __name__ == "__main__":
     print(f"Period: W2={d['w2_start']}→{d['w2_end']} | W1={d['w1_start']}→{d['w1_end']}")
     print(f"MCP URL: {MCP_URL}")
 
-    # Attempt MCP initialization (some servers require it)
     _init_mcp()
 
     errors = []
